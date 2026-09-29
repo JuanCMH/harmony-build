@@ -1,7 +1,12 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { ConvexError, v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
-import { internalMutation, MutationCtx, query } from "./_generated/server";
+import {
+  internalMutation,
+  MutationCtx,
+  query,
+  QueryCtx,
+} from "./_generated/server";
 import { logsErrors } from "./lib/error_messages";
 import { checkPermission } from "./roles";
 import { affectedEntityTypes } from "./schema";
@@ -111,6 +116,40 @@ export const getByProject = query({
   },
 });
 
+const formSummary = async (ctx: QueryCtx, id: Id<"forms"> | null) => {
+  const form = id ? await ctx.db.get(id) : null;
+  if (!form) return null;
+  return {
+    _id: form._id,
+    _creationTime: form._creationTime,
+    kind: form.kind,
+    name: form.name,
+    code: form.code,
+    status: form.status,
+    publishedVersionNumber: form.publishedVersionNumber,
+  };
+};
+
+const responseSummary = async (
+  ctx: QueryCtx,
+  id: Id<"formResponses"> | null,
+) => {
+  const response = id ? await ctx.db.get(id) : null;
+  if (!response) return null;
+  const form = await ctx.db.get(response.formId);
+  return {
+    _id: response._id,
+    _creationTime: response._creationTime,
+    formId: response.formId,
+    formName: form?.name,
+    formKind: form?.kind,
+    date: response.date,
+    status: response.status,
+    title: response.title,
+    active: response.active,
+  };
+};
+
 export const getLogDetails = query({
   args: {
     logId: v.id("logs"),
@@ -152,6 +191,21 @@ export const getLogDetails = query({
           break;
         case "role":
           relatedEntity = await ctx.db.get(log.affectedEntityId as Id<"roles">);
+          break;
+        // De un formato y de una respuesta sale sólo lo que los identifica:
+        // ver la auditoría no es ver las respuestas ni la definición, que
+        // tienen sus propias llaves.
+        case "form":
+          relatedEntity = await formSummary(
+            ctx,
+            ctx.db.normalizeId("forms", log.affectedEntityId),
+          );
+          break;
+        case "formResponse":
+          relatedEntity = await responseSummary(
+            ctx,
+            ctx.db.normalizeId("formResponses", log.affectedEntityId),
+          );
           break;
       }
     }

@@ -32,3 +32,7 @@ export const useGetProjectJoinCode = (
 export const useGetProjectDeletionImpact = (
   data: typeof route.getDeletionImpact._args | "skip",
 ) => useFetch(route.getDeletionImpact, data);
+
+/** El rol que recibe quien entra con el código. Sin `roleId`, lo quita. Exige
+ *  la llave `assignRoles`. */
+export const useSetProjectDefaultRole = () => useMutate(route.setDefaultRole);

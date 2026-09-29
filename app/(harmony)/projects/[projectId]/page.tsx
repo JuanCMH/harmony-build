@@ -5,6 +5,7 @@ import {
   PageMain,
   PageShell,
 } from "@/components/harmony/page-shell";
+import { FillableFormsPanel } from "@/packages/forms/components/fillable-forms-panel";
 import { RecentActivity } from "@/packages/logs/components/recent-activity";
 import { TeamSummary } from "@/packages/members/components/team-summary";
 import { useGetProject } from "@/packages/projects/api";
@@ -30,6 +31,9 @@ export default function ProjectHomePage() {
             la altura de la larga. */}
         <div className="shrink-0 space-y-4">
           <ProjectHeader />
+          {/* Lo primero, antes que el equipo: quien abre el inicio casi
+              siempre viene a diligenciar (decisiones de formatos §7). */}
+          <FillableFormsPanel className="h-auto" />
           <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
             <TeamSummary className="h-auto" />
             {/* La actividad se monta sólo con la llave `viewLogs`: su consulta

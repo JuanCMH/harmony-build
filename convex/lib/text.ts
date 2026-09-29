@@ -7,3 +7,13 @@ export const normalizeText = (value: string) => value.trim().replace(/\s+/g, " "
  *  ni acentos. */
 export const isSameName = (a: string, b: string) =>
   a.localeCompare(b, "es", { sensitivity: "base" }) === 0;
+
+/** Un texto como se busca: en minúsculas, sin tildes y con los espacios
+ *  colapsados. Es lo que se guarda en los campos de búsqueda —`nameSearch`,
+ *  `titleSearch`— y lo que se le hace a lo que alguien escribe en el buscador:
+ *  quien busca «camion» encuentra «Camión». */
+export const searchableText = (value: string) =>
+  normalizeText(value)
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase();

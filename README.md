@@ -20,23 +20,25 @@ trabajar y la familia de componentes `Harmony*`. El dominio es nuevo.
 
 ## Estado actual
 
-**Fase base.** Lo que existe hoy:
-
 - **Autenticación**: registro e inicio de sesión con correo y contraseña o con
   Google; restablecimiento de contraseña por código enviado al correo.
 - **Proyectos**: crear un proyecto (la obra) con su nombre, código, colores y
-  logo; unirse a uno con un código de unión; archivarlo, transferirlo y
-  eliminarlo.
-- **Miembros**: tres niveles de identidad —propietario, administrador y
-  miembro— y expulsión o salida del proyecto.
-- **Roles**: roles personalizados con ocho llaves de permiso.
-- **Auditoría**: registro de cada acto importante, con autor y fecha.
+  logo; unirse con un código de unión, recibiendo el rol por defecto;
+  archivarlo, transferirlo y eliminarlo.
+- **Miembros y roles**: propietario, administrador y miembro con rol
+  personalizado de quince llaves de permiso.
+- **Formatos**: constructor con versiones, 18 tipos de campo —entre ellos lista
+  de chequeo, firma, tabla y relación con otros formatos—, formatos y listados,
+  categorías y audiencia por rol.
+- **Diligenciar**, pensado para el teléfono, con borrador en el dispositivo.
+- **Consultar**: respuestas con filtros, anular con motivo, elementos de los
+  listados con su historial.
+- **Biblioteca SST**: los formatos en papel del cliente, listos para instalar
+  (`CLAUDE.md` dice cómo).
+- **Auditoría** de cada acto importante.
 
-Lo que viene:
-
-- **Módulo de formatos** (formatos, respuestas y relaciones entre formatos):
-  **en diseño**, en `docs/plans/`.
-- **Gráficas del panel**: fase posterior.
+Lo que viene: las gráficas del panel, la exportación a Excel y PDF, y la
+revisión semanal con las firmas de quien autoriza y quien verifica.
 
 ## Quién lo usa
 

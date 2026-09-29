@@ -349,7 +349,7 @@ así que sustituye al gate de lectura, no se suma a él.
 
 ### 5.3 Las llaves
 
-Ocho, todas `v.boolean()` **obligatorias**, tal como viven en
+Quince, todas `v.boolean()` **obligatorias**, tal como viven en
 `convex/permissions.ts`. No hay llaves opcionales ni retiradas: el proyecto nace
 sin documentos previos, así que no hay rol que pueda carecer de una.
 
@@ -374,9 +374,18 @@ sin documentos previos, así que no hay rol que pueda carecer de una.
 | | `deleteRoles` | `roles.remove`. |
 | | `assignRoles` | `members.update`: asignar o quitar un rol personalizado. |
 | **Auditoría** | `viewLogs` | `logs.getByProject`, `logs.getLogDetails`. |
+| **Formatos** | `createForms` | `forms.create`, `forms.duplicate`. |
+| | `editForms` | `formVersions.saveDraft`, `publish`, `discardDraft`, `getDraft`; `forms.updateDetails`, `setTitleField`; `formCategories.*`; `forms.listCatalogs`. |
+| | `deleteForms` | `forms.archive`, `unarchive`, `remove`. |
+| | `fillForms` | `formResponses.submit` (con la audiencia del formato), `formFiles.generateUploadUrl`, `formEntries.searchEntries`. Sin `viewResponses`, `formResponses.list` devuelve sólo las propias. |
+| | `viewResponses` | `formResponses.list` y `getById` de las respuestas de todos; `formEntries.listEntries`, `listEntryHistory`. |
+| | `voidResponses` | `formResponses.void`. |
+| | `editCatalogs` | `formEntries.createEntry`, `updateEntry`, `setEntryActive`; lectura de todos los elementos de un listado. |
 
-**El módulo de formatos añadirá las suyas en su plan** (`docs/plans/`). Hasta
-que ese plan se apruebe, no se reserva ni se inventa ninguna.
+Quien tiene `createForms`, `editForms` o `deleteForms` ve además los
+borradores. Las reglas de acceso completas del módulo están en
+`docs/plans/2026-09-28-modulo-de-formatos-design.md` («Reglas de acceso») y se
+implementan en un solo sitio, `convex/lib/form_access.ts`.
 
 Al añadir una llave nueva:
 
@@ -397,15 +406,14 @@ Al añadir una llave nueva:
 
 #### Llaves que sólo gobiernan la UI
 
-**Ninguna hoy.** Las ocho tienen su comprobación en el servidor.
+**Ninguna hoy.** Las quince tienen su comprobación en el servidor.
 
 La categoría existe y es legítima: una llave puede corresponder a una
 **pantalla que compone operaciones ya gateadas por separado** y no a un
 endpoint propio. Refina la UI por debajo de lo que el servidor distingue, pero
 **no es una barrera**: quien tiene la llave base puede hacer la operación por
-otro camino. Si el módulo de formatos introduce alguna, se anota aquí con la
-llave que la protege de verdad, o el próximo que lea la lista supondrá que
-gatea algo.
+otro camino. Si alguna vez se introduce una, se anota aquí con la llave que la
+protege de verdad, o el próximo que lea la lista supondrá que gatea algo.
 
 ### 5.4 Gating en el cliente
 

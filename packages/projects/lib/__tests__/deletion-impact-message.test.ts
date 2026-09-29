@@ -9,6 +9,8 @@ const impact = (
 ): ProjectDeletionImpact => ({
   members: { count: 0, capped: false },
   roles: { count: 0, capped: false },
+  forms: { count: 0, capped: false },
+  responses: { count: 0, capped: false },
   ...overrides,
 });
 
@@ -17,6 +19,8 @@ describe("buildProjectDeletionMessage", () => {
     const message = buildProjectDeletionMessage(undefined);
     expect(message).toContain("miembros");
     expect(message).toContain("roles");
+    expect(message).toContain("formatos");
+    expect(message).toContain("respuestas");
     expect(message).toContain("todos los registros del proyecto");
     expect(message).toContain("no se puede deshacer");
   });
@@ -70,6 +74,51 @@ describe("buildProjectDeletionMessage", () => {
         impact({ members: { count: 500, capped: true } }),
       ),
     ).toContain("más de 500 miembros");
+  });
+
+  it("nombra también los formatos y sus respuestas, con comas y una sola «y»", () => {
+    expect(
+      buildProjectDeletionMessage(
+        impact({
+          members: { count: 12, capped: false },
+          roles: { count: 3, capped: false },
+          forms: { count: 24, capped: false },
+          responses: { count: 1840, capped: false },
+        }),
+      ),
+    ).toBe(
+      "Se eliminarán 12 miembros, 3 roles, 24 formatos y 1.840 respuestas, junto con todos los registros del proyecto. Esta acción no se puede deshacer.",
+    );
+  });
+
+  it("un formato sin respuestas no inventa respuestas", () => {
+    const message = buildProjectDeletionMessage(
+      impact({
+        members: { count: 1, capped: false },
+        forms: { count: 1, capped: false },
+      }),
+    );
+    expect(message).toContain("Se eliminarán 1 miembro y 1 formato,");
+    expect(message).not.toContain("respuesta");
+  });
+
+  it("habla en singular de una sola respuesta", () => {
+    expect(
+      buildProjectDeletionMessage(
+        impact({
+          forms: { count: 2, capped: false },
+          responses: { count: 1, capped: false },
+        }),
+      ),
+    ).toContain("2 formatos y 1 respuesta,");
+  });
+
+  it("dice «más de» cuando los formatos tocaron el tope", () => {
+    expect(
+      buildProjectDeletionMessage(
+        impact({ forms: { count: 500, capped: true } }),
+      ),
+    ).toContain("más de 500 formatos");
   });
 
   it("no inventa cifras si no hay nada que contar", () => {

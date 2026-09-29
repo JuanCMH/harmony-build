@@ -1,6 +1,6 @@
 # Módulo de formatos
 
-**Fecha:** 2026-09-28 · **Estado:** propuesta
+**Fecha:** 2026-09-28 · **Estado:** implementado (2026-09-29)
 
 > Fuentes de este diseño: los quince formatos reales del cliente
 > (`SST-F-007` a `SST-F-118`, doce libros de Excel), el motor de formularios de
@@ -47,7 +47,7 @@ tiene que respetar:
 Y pueden ser cientos de formatos por proyecto: además de crearlos hay que poder
 encontrarlos.
 
-## Dirección propuesta
+## Dirección aprobada
 
 ### 1. Dos clases de formato: el que se diligencia y el listado
 
@@ -482,8 +482,11 @@ Qué ve cada quien:
 
 ## Preguntas abiertas
 
-Las cuatro primeras cambian el diseño y conviene resolverlas antes de aprobar.
-Cada una lleva la respuesta que este plan asume.
+> **Resueltas al aprobar (2026-09-29):** quien dirige el producto aceptó las
+> nueve con la respuesta que el plan asumía. Se conservan escritas porque cada
+> una nombra la alternativa que se descartó; la 7 (sin conexión) y la 9
+> (inconsistencias del papel) siguen siendo trabajo pendiente, fuera de este
+> plan.
 
 1. **¿Un campo de relación puede apuntar a un formato que no sea listado?**
    Por ejemplo, un «reporte de hallazgo» que apunte a la inspección que lo

@@ -91,7 +91,7 @@ export const ProjectDangerZone = ({ project }: { project: Project }) => {
           />
           <SettingsActionRow
             title="Eliminar proyecto"
-            description="Se borra con sus miembros, sus roles y sus registros. No tiene vuelta atrás."
+            description="Se borra con sus miembros, sus roles, sus formatos, sus respuestas y sus registros. No tiene vuelta atrás."
             action={
               <Button
                 variant="outline"

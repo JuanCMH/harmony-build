@@ -61,7 +61,7 @@ test.describe("Proyecto", () => {
     const createDialog = page.getByRole("dialog");
     await createDialog.getByLabel("Nombre del rol").fill(roleName);
     await createDialog.getByRole("switch", { name: "Ver registros" }).click();
-    await expect(createDialog.getByText("1 de 8")).toBeVisible();
+    await expect(createDialog.getByText("1 de 15")).toBeVisible();
     await createDialog.getByRole("button", { name: "Crear", exact: true }).click();
     await expectToast(page, "Rol creado correctamente");
 

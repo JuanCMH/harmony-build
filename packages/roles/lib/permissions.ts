@@ -9,7 +9,12 @@ import type { permissionsSchema } from "@/convex/permissions";
  *  datos ni infringe `01 §2.2`. */
 export type PermissionValue = keyof typeof permissionsSchema;
 
-export const permissionsGroups = ["Proyecto", "Roles", "Registros"] as const;
+export const permissionsGroups = [
+  "Proyecto",
+  "Roles",
+  "Registros",
+  "Formatos",
+] as const;
 
 export type PermisionGroup = (typeof permissionsGroups)[number];
 
@@ -27,6 +32,23 @@ export const listOfPermissions = [
 
   // Registros
   { name: "Ver registros", group: "Registros", value: "viewLogs" },
+
+  // Formatos
+  { name: "Crear formatos", group: "Formatos", value: "createForms" },
+  { name: "Editar y publicar formatos", group: "Formatos", value: "editForms" },
+  {
+    name: "Archivar y eliminar formatos",
+    group: "Formatos",
+    value: "deleteForms",
+  },
+  { name: "Diligenciar formatos", group: "Formatos", value: "fillForms" },
+  {
+    name: "Ver respuestas de todos",
+    group: "Formatos",
+    value: "viewResponses",
+  },
+  { name: "Anular respuestas", group: "Formatos", value: "voidResponses" },
+  { name: "Gestionar listados", group: "Formatos", value: "editCatalogs" },
 ] as const satisfies readonly {
   name: string;
   group: PermisionGroup;
@@ -45,6 +67,13 @@ export const emptyPermissions = (): Record<PermissionValue, boolean> => ({
   deleteRoles: false,
   assignRoles: false,
   viewLogs: false,
+  createForms: false,
+  editForms: false,
+  deleteForms: false,
+  fillForms: false,
+  viewResponses: false,
+  voidResponses: false,
+  editCatalogs: false,
 });
 
 /** Si `convex/permissions.ts` gana una llave que esta lista no ofrece, esto

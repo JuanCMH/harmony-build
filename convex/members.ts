@@ -16,7 +16,7 @@ const populateCustomRole = (ctx: QueryCtx, id: Id<"roles">) => ctx.db.get(id);
 
 /** Lo que de una persona ve el resto del proyecto. Nunca el documento entero:
  *  `users` es una tabla de autenticación. */
-const publicUser = async (ctx: QueryCtx, id: Id<"users">) => {
+export const publicUser = async (ctx: QueryCtx, id: Id<"users">) => {
   const user = await populateUser(ctx, id);
   if (!user) return null;
 

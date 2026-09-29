@@ -14,7 +14,7 @@ export const PAGE_HEADER_CLASS =
 export const PAGE_SHELL_CLASS = "w-full h-full flex-1 flex flex-col";
 
 /**
- * Las cuatro variantes de `<main>`, y sólo cuatro.
+ * Las cinco variantes de `<main>`, y sólo cinco.
  *
  * Fueron dos hasta el 1 de septiembre de 2026. Ese día ya había dos pantallas
  * anulando el padding por `className` —ajustes con el aire de una vista de
@@ -47,6 +47,15 @@ export const PAGE_MAIN_VARIANTS = {
     // constructor crecía con su contenido y desplazaba el documento entero:
     // al guardar se iban la cabecera y el lienzo y quedaba un hueco en blanco.
     "flex flex-col flex-1 min-h-0 h-1 p-0 lg:h-[calc(100svh-4rem)] lg:flex-none",
+  /** Un formato: para diligenciarlo o para leer una respuesta. Nace en el
+   *  teléfono (`03 §6.2`): 16px de margen, una columna, y aire abajo para la
+   *  barra de envío, que va pegada al borde inferior. En escritorio se centra
+   *  y se ensancha hasta donde una lista de chequeo cabe en dos columnas.
+   *  Quien se desplaza es la ventana, como en el listado: los títulos de
+   *  bloque de una lista de chequeo son `sticky` y un contenedor de scroll los
+   *  anclaría a él. */
+  documento:
+    "flex-1 overflow-x-clip mx-auto w-full max-w-5xl space-y-6 px-4 pt-4 pb-24 sm:px-6 sm:pt-6",
 } as const;
 
 export type PageMainVariant = keyof typeof PAGE_MAIN_VARIANTS;

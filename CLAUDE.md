@@ -20,9 +20,11 @@ Harmony Build deriva de Harmony y conserva su familia de componentes: los
 nombres `HarmonyModal`, `HarmonySheet`, `components/harmony/` y `app/(harmony)/`
 **no se renombran** (`00-reglas-generales §6`).
 
-Lo que depende del módulo de formatos está marcado en las directrices como
-pendiente de su plan (`docs/plans/`): no se rellena sin un plan aprobado
-(`05-reglas-diseno §3`).
+El módulo de formatos está implementado según
+`docs/plans/2026-09-28-modulo-de-formatos-design.md`. Su biblioteca de formatos
+SST vive en `convex/sst_library/` y se instala en un proyecto con
+`bunx convex run formLibrary:installSst '{"projectId":"…","withSamples":true}'`
+(`"update":true` publica una versión nueva de lo que cambió en la biblioteca).
 
 <!-- convex-ai-start -->
 

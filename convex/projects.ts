@@ -6,7 +6,9 @@ import { Doc } from "./_generated/dataModel";
 import { internalMutation, mutation, query, QueryCtx } from "./_generated/server";
 import { customColors } from "./colors";
 import { projectsErrors } from "./lib/error_messages";
+import { projectForms } from "./lib/form_store";
 import { JOIN_CODE_LENGTH } from "./lib/join_codes";
+import { storedFileIds } from "./lib/stored_values";
 import { normalizeText } from "./lib/text";
 import {
   checkPermission,
@@ -220,12 +222,31 @@ export const getDeletionImpact = query({
       };
     };
 
-    const [members, roles] = await Promise.all([
+    // Las respuestas crecen con la operación: no se cuentan leyéndolas, sino
+    // sumando el contador que cada formato mantiene (`01 §6`). Los formatos
+    // son pocos y ligeros.
+    const countForms = async () => {
+      const forms = await projectForms(ctx, args.id);
+      const responses = forms.reduce(
+        (total, form) => total + form.responseCount,
+        0,
+      );
+      return {
+        forms: {
+          count: Math.min(forms.length, IMPACT_COUNT_CAP),
+          capped: forms.length > IMPACT_COUNT_CAP,
+        },
+        responses: { count: responses, capped: false },
+      };
+    };
+
+    const [members, roles, { forms, responses }] = await Promise.all([
       countCapped("members"),
       countCapped("roles"),
+      countForms(),
     ]);
 
-    return { members, roles };
+    return { members, roles, forms, responses };
   },
 });
 
@@ -267,6 +288,21 @@ export const remove = mutation({
 /** Cuántos documentos toca como mucho una pasada de `purgeProjectData`. */
 const PURGE_BATCH = 200;
 
+/** Cuántos documentos **grandes** lee como mucho una pasada. Una versión lleva
+ *  la definición entera de un formato y una respuesta todos sus valores: leer
+ *  doscientos de golpe se acercaría al límite de lectura de la transacción. */
+const PURGE_HEAVY_BATCH = 25;
+
+/** Las tablas de documentos pequeños que cuelgan de `projectId`. */
+const LIGHT_TABLES = [
+  "members",
+  "roles",
+  "logs",
+  "formCategories",
+  "formResponseLinks",
+  "forms",
+] as const;
+
 /** Drena un proyecto ya borrado, por lotes, re-agendándose hasta agotarlo.
  *  Idempotente. Cada tabla que cuelgue de `projectId` entra en esta lista en
  *  el mismo cambio que la crea (`01 §6.1`). */
@@ -275,8 +311,44 @@ export const purgeProjectData = internalMutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     let budget = PURGE_BATCH;
+    // Si alguna lectura llenó su lote, puede quedar más: hay otra pasada.
+    let mayHaveMore = false;
 
-    for (const table of ["members", "roles", "logs"] as const) {
+    // Las respuestas primero, con sus archivos: cada archivo cuenta contra el
+    // presupuesto, porque una entrega de dotación con firma por fila trae
+    // decenas.
+    const responses = await ctx.db
+      .query("formResponses")
+      .withIndex("projectId", (q) => q.eq("projectId", args.projectId))
+      .take(PURGE_HEAVY_BATCH);
+    mayHaveMore ||= responses.length === PURGE_HEAVY_BATCH;
+    for (const response of responses) {
+      const fileIds = storedFileIds(response.values);
+      if (budget < PURGE_BATCH && budget < fileIds.length + 1) {
+        mayHaveMore = true;
+        break;
+      }
+      for (const fileId of fileIds) {
+        const id = ctx.db.system.normalizeId("_storage", fileId);
+        // Una pasada anterior que falló a medias pudo borrarlo ya.
+        if (id && (await ctx.db.system.get(id))) await ctx.storage.delete(id);
+      }
+      await ctx.db.delete(response._id);
+      budget -= fileIds.length + 1;
+    }
+
+    if (budget > 0) {
+      const limit = Math.min(budget, PURGE_HEAVY_BATCH);
+      const versions = await ctx.db
+        .query("formVersions")
+        .withIndex("projectId", (q) => q.eq("projectId", args.projectId))
+        .take(limit);
+      mayHaveMore ||= versions.length === limit;
+      for (const version of versions) await ctx.db.delete(version._id);
+      budget -= versions.length;
+    }
+
+    for (const table of LIGHT_TABLES) {
       if (budget <= 0) break;
       const rows = await ctx.db
         .query(table)
@@ -286,7 +358,7 @@ export const purgeProjectData = internalMutation({
       budget -= rows.length;
     }
 
-    if (budget <= 0) {
+    if (budget <= 0 || mayHaveMore) {
       await ctx.scheduler.runAfter(0, internal.projects.purgeProjectData, {
         projectId: args.projectId,
       });
@@ -384,10 +456,19 @@ export const join = mutation({
     const member = await populateMember(ctx, userId, project._id);
     if (member) return project._id;
 
+    // Quien entra recibe el rol por defecto del proyecto, si lo hay y sigue
+    // existiendo (diseño §9). Sin él, queda como miembro sin rol, que sólo
+    // lee.
+    const defaultRole = project.defaultRoleId
+      ? await ctx.db.get(project.defaultRoleId)
+      : null;
+
     await ctx.db.insert("members", {
       userId,
       projectId: project._id,
       role: "member",
+      customRoleId:
+        defaultRole?.projectId === project._id ? defaultRole._id : undefined,
     });
 
     await ctx.runMutation(internal.logs.create, {
@@ -427,6 +508,54 @@ export const newJoinCode = mutation({
 
     await ctx.runMutation(internal.logs.create, {
       description: "Código de unión renovado",
+      type: "update",
+      projectId: args.id,
+      affectedEntityType: "project",
+      affectedEntityId: args.id,
+    });
+
+    return args.id;
+  },
+});
+
+/** Fija —o quita— el rol que recibe quien entra con el código de unión.
+ *
+ *  Lo gobierna `assignRoles`: elegir el rol por defecto es asignar un rol, por
+ *  adelantado, a todo el que entre. */
+export const setDefaultRole = mutation({
+  args: {
+    id: v.id("projects"),
+    roleId: v.optional(v.id("roles")),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null)
+      throw new ConvexError(projectsErrors.userNotAuthenticated);
+
+    const project = await ctx.db.get(args.id);
+    if (!project) throw new ConvexError(projectsErrors.projectNotFound);
+
+    const hasPermission = await checkPermission({
+      ctx,
+      userId,
+      permission: "assignRoles",
+      projectId: args.id,
+    });
+    if (!hasPermission)
+      throw new ConvexError(projectsErrors.insufficientPermissions);
+
+    // El rol llega por argumentos y tiene que ser de este proyecto: uno ajeno
+    // traería las llaves de otra obra.
+    const role = args.roleId ? await ctx.db.get(args.roleId) : null;
+    if (args.roleId && role?.projectId !== args.id)
+      throw new ConvexError(projectsErrors.defaultRoleNotFound);
+
+    await ctx.db.patch(args.id, { defaultRoleId: role?._id });
+
+    await ctx.runMutation(internal.logs.create, {
+      description: role
+        ? `Rol por defecto del proyecto: ${role.name}`
+        : "Rol por defecto del proyecto retirado",
       type: "update",
       projectId: args.id,
       affectedEntityType: "project",

@@ -4,7 +4,8 @@ import type { Id } from "../_generated/dataModel";
 import { todayInColombia } from "../lib/dates";
 import { logsErrors } from "../lib/error_messages";
 import { SYSTEM_AUTHOR, writeSystemLog } from "../logs";
-import { grant, type Seed, seedProject, setupTest } from "./helpers";
+import { field, oneSection } from "../lib/__tests__/form.fixtures";
+import { grant, type Seed, seedProject, setupTest, stored } from "./helpers";
 
 const authState = vi.hoisted(() => ({
   userId: null as Id<"users"> | null,
@@ -180,5 +181,70 @@ describe("todayInColombia", () => {
     expect(todayInColombia(Date.parse("2026-09-15T05:00:00Z"))).toBe(
       "2026-09-15",
     );
+  });
+});
+
+describe("detalle de un formato y de una respuesta", () => {
+  it("devuelve sólo lo que los identifica: ni la definición ni los valores", async () => {
+    const t = setupTest();
+    const s = await seedProject(t);
+    await grant(t, s.roleId, "viewLogs");
+    const sections = oneSection(
+      field("placa", { label: "Placa", required: true }),
+      field("clave", { label: "Clave del candado" }),
+    );
+
+    authState.userId = s.adminId;
+    const formId = await t.mutation(api.forms.create, {
+      projectId: s.projectId,
+      kind: "catalog",
+      name: "Vehículos",
+      code: "LST-01",
+    });
+    await t.mutation(api.formVersions.saveDraft, { id: formId, sections });
+    await t.mutation(api.forms.setTitleField, {
+      id: formId,
+      titleFieldId: "placa",
+    });
+    await t.mutation(api.formVersions.publish, { id: formId });
+    const entryId = await t.mutation(api.formEntries.createEntry, {
+      formId,
+      values: stored(sections, { placa: "SLP-835", clave: "4821" }),
+    });
+
+    const logs = await t.run((ctx) => ctx.db.query("logs").collect());
+    const ofForm = logs.find((log) => log.affectedEntityType === "form");
+    const ofEntry = logs.find(
+      (log) => log.affectedEntityType === "formResponse",
+    );
+    if (!ofForm || !ofEntry) throw new Error("faltan entradas de auditoría");
+
+    // Quien ve la auditoría no tiene ninguna llave de formatos.
+    authState.userId = s.roleHolderId;
+    const form = await t.query(api.logs.getLogDetails, { logId: ofForm._id });
+    expect(form.relatedEntity).toEqual({
+      _id: formId,
+      _creationTime: expect.any(Number),
+      kind: "catalog",
+      name: "Vehículos",
+      code: "LST-01",
+      status: "published",
+      publishedVersionNumber: 1,
+    });
+
+    const entry = await t.query(api.logs.getLogDetails, { logId: ofEntry._id });
+    expect(entry.relatedEntity).toEqual({
+      _id: entryId,
+      _creationTime: expect.any(Number),
+      formId,
+      formName: "Vehículos",
+      formKind: "catalog",
+      date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+      status: "submitted",
+      title: "SLP-835",
+      active: true,
+    });
+    expect(JSON.stringify(entry)).not.toContain("4821");
+    expect(JSON.stringify(form)).not.toContain("Clave del candado");
   });
 });

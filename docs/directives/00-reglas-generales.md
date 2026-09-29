@@ -170,10 +170,15 @@ tenencia: el proyecto**. Todo cuelga de él y nunca se cruza entre proyectos.
 ```
 Project (la obra o el proyecto de la empresa)
  ├── Members + Roles   → equipo; tres niveles de identidad: owner, admin y
- │                        miembro con rol personalizado (8 llaves de permiso)
- ├── Logs              → auditoría
- └── (módulo de formatos: formatos, respuestas y relaciones entre formatos;
-      se diseña en docs/plans/ y entra en este árbol cuando se implemente)
+ │                        miembro con rol personalizado (15 llaves de permiso)
+ ├── FormCategories    → categorías para ordenar los formatos
+ ├── Forms             → formatos (`record`: lo que la obra hace) y listados
+ │    │                   (`catalog`: lo que la obra tiene)
+ │    ├── FormVersions  → borrador (número 0) y versiones publicadas inmutables
+ │    └── FormResponses → respuestas de un formato y elementos de un listado
+ │         └── FormResponseLinks → a qué elemento de un listado apunta cada
+ │                                  relación respondida
+ └── Logs              → auditoría
 ```
 
 | Tabla | Qué es | Notas |
@@ -181,18 +186,26 @@ Project (la obra o el proyecto de la empresa)
 | `projects` | La obra. `name`, `code` opcional, `userId` (propietario), `joinCode`, `active`, `primaryColor`, `secondaryColor`, `logo`. | Lleva la identidad visual (colores y logo) y el modelo de acceso (código de unión, miembros). Un proyecto archivado (`active: false`) se conserva y se lee, pero no se abre por defecto. |
 | `members` | La pertenencia de una persona a un proyecto. `role: "owner" \| "admin" \| "member"` y `customRoleId` opcional. | Ver `01 §5.1`. |
 | `roles` | Roles personalizados del proyecto, con las 8 llaves de `convex/permissions.ts`. | Ver `01 §5.3`. |
+| `formCategories` | Categorías de formatos del proyecto. | Nombre único sin distinguir mayúsculas ni tildes. |
+| `forms` | Un formato o un listado. **No lleva las secciones.** | Estado `draft`/`published`/`archived`, audiencia, contador de respuestas. |
+| `formVersions` | Las secciones de un formato: su borrador y cada versión publicada. | Una versión publicada no se modifica nunca (`docs/plans/2026-09-28-modulo-de-formatos-design.md §2`). |
+| `formResponses` | Una respuesta —o un elemento de listado— con sus valores anidados y tipados. | Guarda con qué versión se contestó. Una respuesta no se edita: se anula. Un elemento se edita y se inactiva. |
+| `formResponseLinks` | Una fila por elemento distinto que una respuesta relaciona. | Es lo que se consulta al revés: el historial de un vehículo. |
 | `logs` | Auditoría. | Ver `01 §5.5`. |
 | `users` | Identidad (tablas de `@convex-dev/auth`). | No es dominio: una persona existe fuera de cualquier proyecto. |
 
-Ciclo cubierto por la fase base: registro e inicio de sesión · creación de
-proyectos con identidad visual · unión por código · gestión de miembros · roles
-y permisos granulares · auditoría · web responsive instalable como PWA.
+Ciclo cubierto: registro e inicio de sesión · creación de proyectos con
+identidad visual · unión por código con rol por defecto · gestión de miembros ·
+roles y permisos granulares · auditoría · formatos y listados con constructor,
+versiones, 18 tipos de campo, relaciones entre formatos, diligenciamiento desde
+el teléfono y consulta de respuestas · biblioteca de formatos SST
+(`convex/sst_library/`, instalada con `formLibrary.installSst`) · web
+responsive instalable como PWA.
 
 > [!NOTE]
 > El detalle exacto de entidades, campos, índices y estados es responsabilidad de
 > `convex/schema.ts`. Este documento fija el mapa mental; el schema es la forma
-> exacta de los datos. Cuando el módulo de formatos se implemente, su árbol
-> entra aquí en el mismo cambio.
+> exacta de los datos.
 
 ---
 
@@ -250,6 +263,7 @@ librería que cubrirá cada propósito ya está decidida en §5.1.
 | **Calendario** | `react-day-picker` vía `components/ui/calendar.tsx` | un `<input type="date">` suelto | Los selectores de `components/harmony/` lo envuelven (`03 §6`). |
 | **Listas con buscador** | `cmdk` vía `components/ui/command.tsx` | — | Lo consumen `SearchableSelect` y `SearchableMultiSelect`. |
 | **Tema claro/oscuro** | `next-themes` vía `components/providers/theme-provider.tsx` | — | — |
+| **Arrastrar y soltar** | `@dnd-kit/core` + `@dnd-kit/sortable` + `@dnd-kit/utilities` | cualquier otra | El constructor de formatos: la paleta, el lienzo y el orden de los campos. |
 | **Códigos aleatorios** | `oslo/crypto` | `Math.random()` para cualquier credencial | Código de unión y código de restablecimiento. Declarada explícitamente en `package.json`, aunque `@convex-dev/auth` también la trae. |
 | **Observabilidad / errores** | `posthog-js` vía `components/providers/observability-provider.tsx` | Sentry, Datadog, un segundo SDK «por comparar»; `console.error` suelto en código de aplicación | Todo error del cliente pasa por `logError` (`lib/logging.ts`), que es el único punto que reenvía a PostHog. Grabación de sesión y autocaptura se apagan **en el código**, no en el dashboard. Sin `NEXT_PUBLIC_POSTHOG_KEY` el provider no hace nada. |
 
@@ -259,7 +273,6 @@ tabla de arriba en el mismo cambio:
 
 | Propósito | Será la canónica | Entra con |
 |---|---|---|
-| **Arrastrar y soltar** | `@dnd-kit` — *no instalada todavía* | El constructor de formatos, si su plan lo pide. |
 | **Gráficas** | `recharts` — *no instalada todavía* | La fase de gráficas del panel. |
 | **Escribir/exportar Excel** | `exceljs` — *no instalada todavía* | La primera exportación de respuestas. |
 | **Generar PDF** | `pdfmake` — *no instalada todavía* | La primera exportación a PDF. |

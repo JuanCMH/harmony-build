@@ -1,9 +1,10 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { ConvexError, v } from "convex/values";
 import { internal } from "./_generated/api";
-import { Id } from "./_generated/dataModel";
+import { Doc, Id } from "./_generated/dataModel";
 import { mutation, query, QueryCtx } from "./_generated/server";
 import { rolesErrors } from "./lib/error_messages";
+import { projectForms } from "./lib/form_store";
 import { normalizeText } from "./lib/text";
 import { permissionsSchema } from "./permissions";
 
@@ -12,11 +13,13 @@ const NAME_MAX = 40;
 
 const populateCustomRole = (ctx: QueryCtx, id: Id<"roles">) => ctx.db.get(id);
 
+export type PermissionKey = keyof typeof permissionsSchema;
+
 type checkPermissionArgs = {
   ctx: QueryCtx;
   userId: Id<"users">;
   projectId: Id<"projects">;
-  permission?: keyof typeof permissionsSchema;
+  permission?: PermissionKey;
 };
 
 export const populateMember = (
@@ -62,6 +65,46 @@ export const isProjectOwner = async (
   return member?.role === "owner";
 };
 
+/** Lo que una persona puede en un proyecto, leído una sola vez. */
+export interface ProjectAccess {
+  member: Doc<"members">;
+  /** Propietario o administrador: los dos niveles altos de 01 §5.1. */
+  isElevated: boolean;
+  /** Si tiene la llave: siempre en los dos niveles altos; en un miembro, sólo
+   *  si su rol la concede. Una llave ausente deniega. */
+  can: (permission: PermissionKey) => boolean;
+}
+
+/**
+ * La pertenencia y las llaves de una persona en un proyecto, o `null` si no
+ * pertenece.
+ *
+ * Es la misma regla que `checkPermission`, que sale de aquí, para quien
+ * necesita **varias llaves a la vez**: una lista de formatos decide con cuatro
+ * qué enseña de cada fila, y preguntarlas una a una releería el miembro y su
+ * rol por cada fila.
+ */
+export const loadProjectAccess = async (
+  ctx: QueryCtx,
+  userId: Id<"users">,
+  projectId: Id<"projects">,
+): Promise<ProjectAccess | null> => {
+  const member = await populateMember(ctx, userId, projectId);
+  if (!member) return null;
+
+  const isElevated = member.role === "owner" || member.role === "admin";
+  const customRole =
+    !isElevated && member.customRoleId
+      ? await populateCustomRole(ctx, member.customRoleId)
+      : null;
+
+  return {
+    member,
+    isElevated,
+    can: (permission) => isElevated || customRole?.[permission] === true,
+  };
+};
+
 /** El gate de escritura (01 §5.2). Propietario y administrador pasan siempre;
  *  el resto, sólo con la llave de su rol personalizado. Sin `permission`, sólo
  *  pasan los dos niveles altos. */
@@ -71,13 +114,9 @@ export const checkPermission = async ({
   permission,
   projectId,
 }: checkPermissionArgs): Promise<boolean> => {
-  const member = await populateMember(ctx, userId, projectId);
-  if (!member) return false;
-  if (member.role === "owner" || member.role === "admin") return true;
-  if (!permission || !member.customRoleId) return false;
-
-  const customRole = await populateCustomRole(ctx, member.customRoleId);
-  return customRole?.[permission] === true;
+  const access = await loadProjectAccess(ctx, userId, projectId);
+  if (!access) return false;
+  return permission ? access.can(permission) : access.isElevated;
 };
 
 const validateRoleName = (value: string) => {
@@ -157,6 +196,21 @@ export const remove = mutation({
     for (const member of membersWithRole) {
       await ctx.db.patch(member._id, {
         customRoleId: undefined,
+      });
+    }
+
+    // El proyecto sobrevive a su rol por defecto, y un formato a los roles de
+    // su audiencia: se retira el rol de los dos (`01 §6.1`). Un formato que
+    // se queda sin ningún rol en la audiencia no pasa a diligenciarlo todo el
+    // mundo: sólo propietario y administrador, hasta que alguien elija otros.
+    const project = await ctx.db.get(role.projectId);
+    if (project?.defaultRoleId === args.id) {
+      await ctx.db.patch(project._id, { defaultRoleId: undefined });
+    }
+    for (const form of await projectForms(ctx, role.projectId)) {
+      if (!form.audienceRoleIds.includes(args.id)) continue;
+      await ctx.db.patch(form._id, {
+        audienceRoleIds: form.audienceRoleIds.filter((id) => id !== args.id),
       });
     }
 

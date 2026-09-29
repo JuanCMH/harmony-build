@@ -14,12 +14,6 @@
 > consistencia visual del producto depende de seguirlo; un modal mal hecho crea
 > una semana de deriva.
 
-> [!NOTE]
-> **Lo que depende del módulo de formatos está marcado como pendiente.** Los
-> iconos de los tipos de campo (§5.5), los colores de estado del dominio (§1.4)
-> y las reglas del formulario de captura (§6.2) se fijan al aprobar su plan en
-> `docs/plans/`. Hasta entonces, esas secciones dicen sólo lo que ya es cierto.
-
 ---
 
 ## 0. Resoluciones del canon (leer primero)
@@ -269,14 +263,25 @@ Y los de la auditoría, que salen de `logs.type` y se traducen en un solo sitio,
 | Eliminar | red-500 | `Trash2` |
 | Información | gray-500 | `Info` |
 
-> [!NOTE]
-> **Los colores de estado del dominio están pendientes del plan de formatos.**
-> El dominio todavía no tiene estados propios —qué color lleva una respuesta
-> con hallazgos, un ítem que no cumple, un elemento vencido—, y no se inventan
-> aquí. Cuando el plan los fije, entran en esta sección como una tabla con tres
-> columnas obligatorias: el estado, su color y **de qué dato sale**. Un color de
-> estado no es una elección de interfaz: es la traducción de un valor guardado,
-> y esa traducción vive en un solo sitio del código.
+**Los estados del dominio.** Cada uno traduce un dato guardado, y la
+traducción vive en un solo módulo: `packages/forms/lib/status.ts` para formatos
+y respuestas, `packages/forms/lib/checklist-styles.ts` para la lista de chequeo.
+
+| Estado | De qué dato sale | Color | Cómo se lee |
+|---|---|---|---|
+| Formato en borrador | `forms.status === "draft"` | gray | «Borrador» |
+| Formato publicado | `forms.status === "published"` | green | «Publicado · v3» |
+| Cambios sin publicar | `status === "published" && hasDraftChanges` | yellow | «Cambios sin publicar» (sustituye a la anterior) |
+| Formato archivado | `forms.status === "archived"` | gray | «Archivado» |
+| Respuesta enviada | `formResponses.status === "submitted"` | — | Sin insignia: es lo normal |
+| Respuesta anulada | `formResponses.status === "voided"` | red | «Anulada», la fila atenuada y el motivo a la vista |
+| Elemento inactivo | `formResponses.active === false` | gray | «Inactivo» |
+| Ítem conforme · no conforme · no aplica | `ChecklistOption.meaning` | green · red · gray | Siempre con la letra o el nombre de la opción |
+
+Los estados van en `Badge variant="outline"` con el tinte de su familia
+(`border-<color>-500/20 bg-<color>-500/10 text-<color>-700 dark:text-<color>-400`).
+El único relleno sólido es el botón de la opción **elegida** en una lista de
+chequeo: se pulsa con el pulgar al sol y tiene que verse de lejos.
 
 **Una magnitud sin estado no se pinta con color de estado.** El color de estado
 es de los registros que *tienen* un estado. Una cifra que sólo mide —cuántas
@@ -351,14 +356,15 @@ En la práctica no se escribe a mano: se usa `PageShell` / `PageHeader` /
 más. Las clases viven en `page-shell.utils.ts` y una prueba las vigila
 (`components/harmony/__tests__/page-shell.test.ts`).
 
-Cuatro variantes de contenido, y sólo cuatro:
+Cinco variantes de contenido, y sólo cinco:
 
 | Variante | Clases | Cuándo |
 |---|---|---|
 | **Listado** | `flex-1 overflow-x-clip p-2 space-y-4` | Tablas y listados a pantalla completa. Se desplaza la ventana, no la sección: con `overflow-y-auto` la sección sería un contenedor de scroll que nunca se mueve y anularía todo `sticky` de dentro. |
 | **Compuesta** | `flex flex-col flex-1 min-h-0 gap-2 h-1 p-4` | Vistas con paneles internos que gestionan su propio scroll. |
 | **Lectura** | `flex-1 overflow-y-auto mx-auto w-full max-w-3xl space-y-10 px-6 pt-8 pb-16` | Una pantalla que se lee, no que se rastrea: cada área de ajustes (§1.2, nota). `SettingsArea` la monta; una página no la escribe a mano. |
-| **Editor** | `flex flex-col flex-1 min-h-0 h-1 p-0 lg:h-[calc(100svh-4rem)] lg:flex-none` | Un editor cuyos paneles dibujan sus propios bordes y padding. Es la compuesta a sangre, con el alto de la ventana en escritorio: sin él, una columna larga desplaza el documento entero. **Hoy no tiene consumidor**: está reservada para el constructor de formatos. |
+| **Editor** | `flex flex-col flex-1 min-h-0 h-1 p-0 lg:h-[calc(100svh-4rem)] lg:flex-none` | Un editor cuyos paneles dibujan sus propios bordes y padding: el constructor de formatos. Es la compuesta a sangre, con el alto de la ventana en escritorio: sin él, una columna larga desplaza el documento entero. |
+| **Documento** | `flex-1 overflow-x-clip mx-auto w-full max-w-5xl space-y-6 px-4 pt-4 pb-24 sm:px-6 sm:pt-6` | Un formato para diligenciar, o una respuesta para leer. Nace en el teléfono (§6.2): 16px de margen y sitio abajo para la barra de envío. Se desplaza la ventana, no la sección: los títulos de bloque de una lista de chequeo son `sticky`. |
 
 > [!NOTE]
 > **Una variante con nombre la vigila la prueba; una anulación suelta no la
@@ -724,15 +730,17 @@ Tamaños: `size-4` en botones y filas densas, `size-5` dentro de contenedores
 | Rol | `ShieldCheck` |
 | Registros (auditoría) | `History` |
 | Ajustes | `Settings` |
-| **Formatos, respuestas y relaciones entre formatos** | *pendiente del plan de formatos* |
+| Formato | `ClipboardList` |
+| Listado | `LibraryBig` |
+| Respuesta | `ClipboardPen` |
+| Elemento de un listado | `Box` |
+| Categoría de formatos | `Tag` |
 
 > **Por qué `HardHat` y no `Building2`**: el casco nombra la obra, que es lo que
 > un proyecto es aquí; el edificio nombra el resultado o la empresa. `Building2`
 > queda libre, y sin asignar, por si el dominio necesita más adelante una
 > entidad «empresa» o «contratista».
 
-Las entradas del módulo de formatos se añaden a esta tabla al aprobar su plan,
-con la comprobación de §5.6: ninguna puede repetir un glifo de los de arriba.
 
 ### 5.3 Acciones
 
@@ -744,7 +752,10 @@ fijar · `GripVertical` arrastrar · `MoreHorizontal` más acciones · `Link`
 enlace · `BadgeCheck` verificado · `SlidersHorizontal` filtro · `ScanEye`
 previsualizar · `EyeOff` ocultar · `LogIn` entrar o unirse · `LogOut` salir ·
 `FileSpreadsheet` exportar Excel · `Code` exportar JSON · `ListChecks`
-seleccionar todo.
+seleccionar todo, y «Todo conforme» en un bloque de una lista de chequeo ·
+`PenLine` diligenciar · `Rocket` publicar · `Undo2` descartar un borrador ·
+`CopyPlus` duplicar · `Archive` archivar · `Ban` anular una respuesta ·
+`Eraser` borrar una firma.
 
 `Settings` no está en esta lista: es la entrada «Ajustes» de §5.2.
 
@@ -758,24 +769,30 @@ seleccionar todo.
 - **Chrome**: `Sun`/`Moon` (tema), `Monitor`/`Tablet`/`Smartphone`.
 - **Comunicación**: `Mail`, `Phone`; Google como SVG de `components/icons/`.
 
-### 5.5 Campos del constructor de formularios
+### 5.5 Campos del constructor de formatos
 
-**Pendiente del plan del módulo de formatos.** Los glifos de los tipos de
-campo, las marcas de comportamiento y cualquier otro icono del constructor se
-fijan al aprobar ese plan (`docs/plans/`), y entran aquí en el mismo cambio que
-los implementa.
+Los dieciocho tipos de `convex/lib/form_types.ts`, con el glifo de
+`packages/forms/lib/field-catalog.ts`, que es el único módulo donde viven. Es
+una lista cerrada aparte de las entidades de §5.2, y dentro de ella **ningún
+glifo se repite** (una prueba lo comprueba):
 
-Lo que ya es regla, porque no depende de qué tipos existan:
+`Type` texto corto · `AlignLeft` texto largo · `AtSign` correo · `Phone`
+teléfono · `Link` enlace · `Hash` número · `DollarSign` moneda · `Calendar`
+fecha · `Clock` hora · `List` lista · `ListTodo` lista múltiple ·
+`CheckSquare` casilla · `Paperclip` archivo · `Image` imagen · `Network`
+relación · `ClipboardCheck` lista de chequeo · `Signature` firma · `Table`
+tabla.
 
-- Es una **lista cerrada aparte** de las entidades de §5.2, y dentro de ella
-  **ningún glifo se repite**: dos entradas iguales en una paleta de tipos no
-  distinguen ninguna.
-- Ningún glifo del constructor puede tener ya dueño en §5.2 o en los estados de
-  §1.4. Se comprueba contra el catálogo antes de elegirlo, no después.
-- Lo que un campo *hace* y no se ve en el control —si es condicional, si se
-  calcula— se marca con un glifo propio, también de lista cerrada.
-- El catálogo de glifos vive en **un solo módulo** del paquete que lo
-  implemente, y este documento y ese módulo se corrigen el uno contra el otro.
+> La lista múltiple no es `ListChecks`, como en Harmony: aquí `ListChecks` es
+> la acción «Todo conforme» y convive con ella en la misma pantalla.
+
+**Marcas de comportamiento**, también de lista cerrada: `Split` condicional ·
+`Sigma` calculado · `Lightbulb` valor sugerido.
+
+**Recetas de un valor derivado**: `Percent` porcentaje de un campo · `Equal`
+operación entre campos · `Timer` días hasta una fecha · `TimerReset` días desde
+una fecha · `Cake` años desde una fecha · `CalendarPlus` fecha más un plazo ·
+`Tally5` conteo de marcadas · `Combine` texto compuesto · `Variable` fórmula.
 
 ### 5.6 Añadir un icono al catálogo
 
@@ -845,21 +862,40 @@ administración, que existen hoy, y el de captura, cuando llegue.
 
 ### 6.2 El formulario de captura
 
-**Las reglas concretas se fijan al aprobar el plan del módulo de formatos**
-(`docs/plans/`): tamaño de los controles, cómo se presenta una lista de
-chequeo, pasos, guardado, qué pasa cuando la red falla. No se adelantan aquí.
+Quien diligencia lo hace en el teléfono, en la obra, con prisa y a veces al
+sol (`00 §2.3`, `02 §7.1`). De ahí estas reglas, que implementan
+`packages/forms/components/form-form.tsx` y los controles de campo:
 
-Lo que ya es regla, porque sale de quién lo usa y no de cómo se construya
-(`00 §2.3`, `02 §7.1`):
-
-- **Se diseña primero para pantalla estrecha.** Las decisiones de estructura se
-  toman a 390px de ancho; el escritorio se deriva de ahí.
-- **Corto y claro.** Quien diligencia tiene prisa y lo hace a diario: cada
-  campo que no hace falta es un motivo para volver al papel.
-- **Todo lo anterior de §6 y §6.1 le aplica**, y los tres overlays de §3 siguen
-  siendo los únicos.
+- **Se decide a 390px de ancho.** Una columna en teléfono, seis en tableta y
+  doce en escritorio (`packages/forms/lib/grid.ts`: pequeño 3, medio 6, grande
+  9, entero 12). La lista de chequeo, la tabla y el texto largo ocupan siempre
+  la fila entera.
+- **En escritorio, las filas se completan.** Los tamaños de los campos
+  seguidos de una sección suman doce; la excepción legítima es la firma, que
+  va a media fila (a ancho completo sería un recuadro de 1.100 px). Lo vigila
+  una prueba de la biblioteca de formatos.
+- **Controles de 40px en teléfono** (`h-10`) y 36px desde `sm`. Los campos de
+  texto van a 16px en teléfono: por debajo, iOS amplía la página al enfocar.
+- **Etiqueta encima**, ayuda debajo de la etiqueta, asterisco de obligatorio en
+  `text-destructive` con su texto accesible.
+- **Secciones**: pestañas desde `lg`; en teléfono y tableta, apiladas con su
+  título, porque la hoja se recorre hacia abajo.
+- **La lista de chequeo** es una fila por ítem con la escala en botones del
+  ancho del pulgar; el título de cada bloque se queda arriba al desplazar;
+  «Todo conforme» por bloque, sin pisar lo ya marcado; la observación aparece
+  sola al marcar no conforme.
+- **Barra de envío pegada abajo**, con lo que falta a la izquierda («Faltan 3
+  obligatorios»). Al enviar con faltantes, el foco va al primero y se señalan
+  todos.
+- **Borrador en el dispositivo**: lo escrito se guarda solo mientras no se
+  envía, y al volver se ofrece recuperarlo. Los archivos y las firmas no caben
+  en el borrador, y la franja lo dice.
 - **Ningún dato escrito se pierde en silencio.** Si algo impide guardar, se
   dice, y lo escrito sigue en pantalla.
+- **Una respuesta leída es texto, no controles deshabilitados**: pares
+  etiqueta–valor, los hallazgos de una lista de chequeo primero.
+- **Todo lo anterior de §6 y §6.1 le aplica**, y los tres overlays de §3 siguen
+  siendo los únicos.
 
 ---
 

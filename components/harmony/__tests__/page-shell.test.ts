@@ -46,13 +46,24 @@ describe("armazón de página (03 §2.1)", () => {
   });
 
   describe("contenido", () => {
-    it("ofrece exactamente cuatro variantes", () => {
+    it("ofrece exactamente cinco variantes", () => {
       expect(Object.keys(PAGE_MAIN_VARIANTS)).toEqual([
         "listado",
         "compuesta",
         "lectura",
         "editor",
+        "documento",
       ]);
+    });
+
+    it("la de documento parte del teléfono y deja sitio a la barra de envío", () => {
+      const c = clases(PAGE_MAIN_VARIANTS.documento);
+      expect(c.has("px-4")).toBe(true);
+      expect(c.has("pb-24")).toBe(true);
+      expect(c.has("max-w-5xl")).toBe(true);
+      // Un contenedor de scroll anclaría los títulos `sticky` de una lista de
+      // chequeo a él y no a la ventana.
+      expect(c.has("overflow-y-auto")).toBe(false);
     });
 
     it("la de listado recorta sin ser contenedor de scroll, con el padding denso", () => {

@@ -3,6 +3,7 @@
 import { MembersSection } from "@/packages/members/components/members-section";
 import { MemberProfileModal } from "@/packages/members/components/modals/member-profile-modal";
 import { useParentMemberId } from "@/packages/members/store/use-parent-member-id";
+import { ProjectDefaultRole } from "@/packages/projects/components/project-default-role";
 import { ProjectInviteModal } from "@/packages/projects/components/modals/project-invite-modal";
 import { ProjectSettingsPage } from "@/packages/projects/components/project-settings-page";
 import { useState } from "react";
@@ -17,6 +18,7 @@ export default function ProjectSettingsUsersPage() {
       <MembersSection
         onSelectMember={(id) => setMemberId(id)}
         onInvite={() => setInviteOpen(true)}
+        beforeList={<ProjectDefaultRole />}
       />
 
       {memberId ? (

@@ -9,7 +9,7 @@ import type { PermissionValue } from "@/packages/roles/lib/permissions";
  * diciendo cosas distintas.
  */
 export interface SettingsAreaDefinition {
-  key: "general" | "users" | "roles";
+  key: "general" | "users" | "roles" | "categories";
   title: string;
   /** Lo que se añade a la dirección base. Vacío en General, que **es** la base. */
   segment: string;
@@ -30,6 +30,14 @@ export const SETTINGS_AREAS = [
     title: "Roles",
     segment: "/roles",
     permissions: ["createRoles", "editRoles", "deleteRoles"],
+  },
+  {
+    // Las categorías de formatos las administra quien edita formatos: es la
+    // misma llave que exige el servidor para crearlas y renombrarlas.
+    key: "categories",
+    title: "Categorías",
+    segment: "/categorias",
+    permissions: ["editForms"],
   },
 ] as const satisfies readonly SettingsAreaDefinition[];
 

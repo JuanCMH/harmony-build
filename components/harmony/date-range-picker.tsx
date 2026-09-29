@@ -84,14 +84,14 @@ export function DateRangePicker({
             {date?.from ? (
               date.to ? (
                 <>
-                  {format(date.from, "LLL dd, y", { locale: es })} -{" "}
-                  {format(date.to, "LLL dd, y", { locale: es })}
+                  {format(date.from, "d MMM y", { locale: es })} -{" "}
+                  {format(date.to, "d MMM y", { locale: es })}
                 </>
               ) : (
-                format(date.from, "LLL dd, y", { locale: es })
+                format(date.from, "d MMM y", { locale: es })
               )
             ) : (
-              <span>Seleccionar Rango</span>
+              <span>Seleccionar rango</span>
             )}
           </Button>
         </PopoverTrigger>

@@ -13,11 +13,31 @@ import {
   SidebarFooter,
   SidebarHeader,
 } from "@/components/ui/sidebar";
+// El menú es el único sitio del hub que mira hacia un paquete de feature, y
+// sólo toma de él lo que no puede inventar: el glifo de la entidad y su
+// dirección. Ni componentes ni datos (`02 §4.3`).
+import { ENTITY_ICONS } from "@/packages/forms/lib/field-catalog";
+import { formRoutes } from "@/packages/forms/lib/routes";
+import type { PermissionValue } from "@/packages/roles/lib/permissions";
 import { usePermissions } from "@/packages/roles/store/use-permissions";
 import { History, House, Settings } from "lucide-react";
 import { useMemo, type ComponentProps } from "react";
 import { useProjectId } from "../store/use-project-id";
 import { ProjectSwitcher } from "./project-switcher";
+
+/**
+ * Basta una de estas llaves para que «Formatos» tenga algo que enseñar: quien
+ * los construye, quien los diligencia, quien consulta sus respuestas y quien
+ * mantiene los listados. Un miembro sin rol no ve la entrada.
+ */
+const FORMS_PERMISSIONS: PermissionValue[] = [
+  "createForms",
+  "editForms",
+  "deleteForms",
+  "fillForms",
+  "viewResponses",
+  "editCatalogs",
+];
 
 /**
  * El menú del proyecto.
@@ -31,6 +51,7 @@ export const ProjectSidebar = ({
   const projectId = useProjectId();
   const { can, isLoading } = usePermissions();
   const canViewLogs = can(["viewLogs"]);
+  const canSeeForms = can(FORMS_PERMISSIONS);
 
   const entries: SidebarMenuEntry[] = useMemo(() => {
     const base = `/projects/${projectId}`;
@@ -41,6 +62,17 @@ export const ProjectSidebar = ({
         group: "operacion",
         href: base,
       },
+      ...(canSeeForms
+        ? [
+            {
+              title: "Formatos",
+              icon: ENTITY_ICONS.form,
+              hint: "Los formatos y los listados del proyecto",
+              group: "operacion",
+              href: formRoutes.list(projectId),
+            } satisfies SidebarMenuEntry,
+          ]
+        : []),
       ...(canViewLogs
         ? [
             {
@@ -60,7 +92,7 @@ export const ProjectSidebar = ({
         href: `${base}/ajustes`,
       },
     ];
-  }, [projectId, canViewLogs]);
+  }, [projectId, canViewLogs, canSeeForms]);
 
   return (
     <Sidebar variant="inset" collapsible="icon" {...props}>
@@ -68,13 +100,16 @@ export const ProjectSidebar = ({
         <ProjectSwitcher />
       </SidebarHeader>
       <SidebarContent>
-        {/* Mientras se resuelven los permisos no se sabe si «Registros» va:
-            pintar el menú sin ella y añadirla después empuja a «Ajustes». */}
+        {/* Mientras se resuelven los permisos no se sabe si «Formatos» y
+            «Registros» van: pintar el menú sin ellas y añadirlas después
+            empuja a «Ajustes». */}
         {isLoading ? (
-          <SidebarMenuGroupsLoading
-            groups={["operacion", "configuracion"]}
-            rows={1}
-          />
+          <>
+            {/* Dos filas en operación: casi todo miembro tiene alguna llave
+                de formatos, y el esqueleto promete lo que va a llegar. */}
+            <SidebarMenuGroupsLoading groups={["operacion"]} rows={2} />
+            <SidebarMenuGroupsLoading groups={["configuracion"]} rows={1} />
+          </>
         ) : (
           <SidebarMenuGroups entries={entries} />
         )}

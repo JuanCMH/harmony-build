@@ -10,6 +10,8 @@ const ENTITY_TYPE_TITLES: Record<AffectedEntityType, string> = {
   project: "Detalles del proyecto",
   member: "Detalles del miembro",
   role: "Detalles del rol",
+  form: "Detalles del formato",
+  formResponse: "Detalles de la respuesta",
 };
 
 const LOG_TYPE_LABELS: Record<LogType, string> = {

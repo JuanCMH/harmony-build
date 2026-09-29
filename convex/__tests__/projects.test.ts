@@ -1,9 +1,24 @@
 import { describe, expect, it, vi } from "vitest";
 import { api, internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
+import {
+  field,
+  oneSection,
+  referenceField,
+} from "../lib/__tests__/form.fixtures";
 import { projectsErrors } from "../lib/error_messages";
 import { JOIN_CODE_LENGTH } from "../lib/join_codes";
-import { grant, NO_PERMISSIONS, seedProject, setupTest } from "./helpers";
+import {
+  drainScheduled,
+  grant,
+  NO_PERMISSIONS,
+  pick,
+  seedForm,
+  seedProject,
+  setupTest,
+  stored,
+  storeFile,
+} from "./helpers";
 
 const authState = vi.hoisted(() => ({
   userId: null as Id<"users"> | null,
@@ -22,6 +37,72 @@ const IDENTITY = {
   primaryColor: "blue",
   secondaryColor: "gray",
 } as const;
+
+const VEHICLES = oneSection(
+  field("placa", { label: "Placa", required: true }),
+  field("foto", { type: "image", label: "Foto" }),
+);
+
+const INSPECTION = (vehicles: string) =>
+  oneSection(
+    referenceField("vehiculo", vehicles, [], { label: "Vehículo" }),
+    field("evidencia", { type: "image", label: "Evidencia" }),
+  );
+
+/** Lo mínimo de cada tabla del módulo de formatos en un proyecto: una
+ *  categoría, un listado con un vehículo, y una inspección con dos respuestas
+ *  que lo eligen. El vehículo y una respuesta llevan un archivo. */
+async function seedFormsModule(
+  t: ReturnType<typeof setupTest>,
+  s: { projectId: Id<"projects">; ownerId: Id<"users"> },
+) {
+  const base = { projectId: s.projectId, createdBy: s.ownerId };
+  await t.run((ctx) =>
+    ctx.db.insert("formCategories", { projectId: s.projectId, name: "SST" }),
+  );
+  const vehicles = await seedForm(t, {
+    ...base,
+    sections: VEHICLES,
+    kind: "catalog",
+    name: "Vehículos",
+    titleFieldId: "placa",
+  });
+  const sections = INSPECTION(vehicles.formId);
+  const inspection = await seedForm(t, {
+    ...base,
+    sections,
+    name: "Inspección de vehículos",
+  });
+
+  const photo = await storeFile(t, { contentType: "image/png" });
+  const evidence = await storeFile(t, { contentType: "image/png" });
+
+  authState.userId = s.ownerId;
+  const truck = await t.mutation(api.formEntries.createEntry, {
+    formId: vehicles.formId,
+    values: stored(VEHICLES, {
+      placa: "SLP-835",
+      foto: { storageId: photo, name: "camion.png" },
+    }),
+  });
+  await t.mutation(api.formResponses.submit, {
+    formId: inspection.formId,
+    values: stored(sections, {
+      vehiculo: pick(truck),
+      evidencia: { storageId: evidence, name: "evidencia.png" },
+    }),
+  });
+  await t.mutation(api.formResponses.submit, {
+    formId: inspection.formId,
+    values: stored(sections, { vehiculo: pick(truck) }),
+  });
+
+  return {
+    vehicles: vehicles.formId,
+    inspection: inspection.formId,
+    files: [photo, evidence],
+  };
+}
 
 describe("projects.create", () => {
   it("deja a quien crea como propietario, con código de unión y constancia", async () => {
@@ -301,7 +382,31 @@ describe("projects.remove", () => {
     ).toEqual({
       members: { count: 4, capped: false },
       roles: { count: 1, capped: false },
+      forms: { count: 0, capped: false },
+      responses: { count: 0, capped: false },
     });
+  });
+
+  it("el aviso cuenta también los formatos y sus respuestas", async () => {
+    const t = setupTest();
+    const s = await seedProject(t);
+    const { inspection, vehicles } = await seedFormsModule(t, s);
+    // Lo del vecino no cuenta.
+    await seedForm(t, {
+      projectId: s.otherProjectId,
+      createdBy: s.outsiderId,
+      sections: INSPECTION(vehicles),
+    });
+
+    authState.userId = s.ownerId;
+    expect(
+      await t.query(api.projects.getDeletionImpact, { id: s.projectId }),
+    ).toMatchObject({
+      forms: { count: 2, capped: false },
+      // Dos inspecciones y un vehículo.
+      responses: { count: 3, capped: false },
+    });
+    expect(inspection).toBeDefined();
   });
 
   it("la purga drena lo que cuelga del proyecto y no toca el vecino", async () => {
@@ -318,7 +423,7 @@ describe("projects.remove", () => {
     await t.mutation(internal.projects.purgeProjectData, {
       projectId: s.projectId,
     });
-    await t.finishInProgressScheduledFunctions();
+    await drainScheduled(t);
 
     const left = await t.run(async (ctx) => ({
       project: await ctx.db.get(s.projectId),
@@ -347,5 +452,281 @@ describe("projects.remove", () => {
     expect(left.neighbour).not.toBeNull();
     expect(left.neighbourMember).not.toBeNull();
     expect(left.neighbourRole).not.toBeNull();
+  });
+
+  it("la purga drena las tablas de formatos y borra los archivos de las respuestas", async () => {
+    const t = setupTest();
+    const s = await seedProject(t);
+    const mine = await seedFormsModule(t, s);
+
+    // El vecino tiene lo mismo, y tiene que seguir teniéndolo.
+    authState.userId = s.outsiderId;
+    const theirs = await seedFormsModule(t, {
+      ...s,
+      projectId: s.otherProjectId,
+      ownerId: s.outsiderId,
+    });
+
+    authState.userId = s.ownerId;
+    await t.mutation(api.projects.remove, { id: s.projectId });
+    await t.mutation(internal.projects.purgeProjectData, {
+      projectId: s.projectId,
+    });
+    await drainScheduled(t);
+
+    const left = await t.run(async (ctx) => {
+      const count = async (
+        table:
+          | "formCategories"
+          | "forms"
+          | "formVersions"
+          | "formResponses"
+          | "formResponseLinks",
+        projectId: Id<"projects">,
+      ) =>
+        (
+          await ctx.db
+            .query(table)
+            .withIndex("projectId", (q) => q.eq("projectId", projectId))
+            .collect()
+        ).length;
+      const tables = [
+        "formCategories",
+        "forms",
+        "formVersions",
+        "formResponses",
+        "formResponseLinks",
+      ] as const;
+      return {
+        mine: await Promise.all(tables.map((t) => count(t, s.projectId))),
+        theirs: await Promise.all(
+          tables.map((t) => count(t, s.otherProjectId)),
+        ),
+        myFiles: await Promise.all(
+          mine.files.map((id) => ctx.db.system.get(id)),
+        ),
+        theirFiles: await Promise.all(
+          theirs.files.map((id) => ctx.db.system.get(id)),
+        ),
+      };
+    });
+
+    expect(left.mine).toEqual([0, 0, 0, 0, 0]);
+    // Una categoría, dos formatos con borrador y versión, tres respuestas y
+    // dos relaciones.
+    expect(left.theirs).toEqual([1, 2, 4, 3, 2]);
+    expect(left.myFiles).toEqual([null, null]);
+    expect(left.theirFiles.every((file) => file !== null)).toBe(true);
+  });
+
+  it("la purga es idempotente y aguanta una respuesta con muchos archivos", async () => {
+    const t = setupTest();
+    const s = await seedProject(t);
+    await seedFormsModule(t, s);
+    // Una entrega con más archivos que documentos caben en una pasada.
+    const heavy = await t.run(async (ctx) => {
+      const form = await ctx.db
+        .query("forms")
+        .withIndex("projectId", (q) => q.eq("projectId", s.projectId))
+        .first();
+      const version = await ctx.db
+        .query("formVersions")
+        .withIndex("projectId", (q) => q.eq("projectId", s.projectId))
+        .first();
+      if (!form || !version) throw new Error("falta la siembra");
+      const files = [];
+      for (let index = 0; index < 210; index++) {
+        files.push(await ctx.storage.store(new Blob([`foto ${index}`])));
+      }
+      await ctx.db.insert("formResponses", {
+        formId: form._id,
+        projectId: s.projectId,
+        versionId: version._id,
+        date: "2026-09-29",
+        submittedBy: s.ownerId,
+        status: "submitted",
+        values: files.map((storageId, index) => ({
+          fieldId: `foto-${index}`,
+          value: { kind: "file" as const, storageId, name: `${index}.jpg` },
+        })),
+      });
+      return files;
+    });
+
+    // Varias pasadas a mano: cada una hace lo que le cabe, y repetirla de más
+    // no rompe nada.
+    for (let pass = 0; pass < 6; pass++) {
+      await t.mutation(internal.projects.purgeProjectData, {
+        projectId: s.projectId,
+      });
+    }
+    await drainScheduled(t);
+
+    const left = await t.run(async (ctx) => ({
+      responses: await ctx.db
+        .query("formResponses")
+        .withIndex("projectId", (q) => q.eq("projectId", s.projectId))
+        .collect(),
+      versions: await ctx.db
+        .query("formVersions")
+        .withIndex("projectId", (q) => q.eq("projectId", s.projectId))
+        .collect(),
+      files: await Promise.all(heavy.map((id) => ctx.db.system.get(id))),
+    }));
+    expect(left.responses).toEqual([]);
+    expect(left.versions).toEqual([]);
+    expect(left.files.every((file) => file === null)).toBe(true);
+  });
+});
+
+describe("rol por defecto (diseño §9)", () => {
+  it("quien entra con el código recibe el rol por defecto del proyecto", async () => {
+    const t = setupTest();
+    const s = await seedProject(t);
+
+    authState.userId = s.adminId;
+    await t.mutation(api.projects.setDefaultRole, {
+      id: s.projectId,
+      roleId: s.roleId,
+    });
+    expect(
+      (await t.query(api.projects.getById, { id: s.projectId }))?.defaultRoleId,
+    ).toBe(s.roleId);
+
+    authState.userId = s.outsiderId;
+    await t.mutation(api.projects.join, { joinCode: "abc123abc123" });
+
+    const member = await t.run((ctx) =>
+      ctx.db
+        .query("members")
+        .withIndex("projectId_userId", (q) =>
+          q.eq("projectId", s.projectId).eq("userId", s.outsiderId),
+        )
+        .unique(),
+    );
+    expect(member).toMatchObject({ role: "member", customRoleId: s.roleId });
+  });
+
+  it("quien ya era miembro no cambia de rol al volver a entrar", async () => {
+    const t = setupTest();
+    const s = await seedProject(t);
+
+    authState.userId = s.adminId;
+    await t.mutation(api.projects.setDefaultRole, {
+      id: s.projectId,
+      roleId: s.roleId,
+    });
+    authState.userId = s.plainId;
+    await t.mutation(api.projects.join, { joinCode: "abc123abc123" });
+
+    expect(
+      (await t.run((ctx) => ctx.db.get(s.plainMemberId)))?.customRoleId,
+    ).toBeUndefined();
+  });
+
+  it("sin rol por defecto, entrar deja un miembro sin rol, como siempre", async () => {
+    const t = setupTest();
+    const s = await seedProject(t);
+
+    authState.userId = s.adminId;
+    await t.mutation(api.projects.setDefaultRole, {
+      id: s.projectId,
+      roleId: s.roleId,
+    });
+    await t.mutation(api.projects.setDefaultRole, { id: s.projectId });
+    expect(
+      (await t.run((ctx) => ctx.db.get(s.projectId)))?.defaultRoleId,
+    ).toBeUndefined();
+
+    authState.userId = s.outsiderId;
+    await t.mutation(api.projects.join, { joinCode: "abc123abc123" });
+    const member = await t.run((ctx) =>
+      ctx.db
+        .query("members")
+        .withIndex("projectId_userId", (q) =>
+          q.eq("projectId", s.projectId).eq("userId", s.outsiderId),
+        )
+        .unique(),
+    );
+    expect(member?.customRoleId).toBeUndefined();
+  });
+
+  it("el rol tiene que ser del proyecto, y fijarlo exige `assignRoles`", async () => {
+    const t = setupTest();
+    const s = await seedProject(t);
+
+    authState.userId = s.adminId;
+    await expect(
+      t.mutation(api.projects.setDefaultRole, {
+        id: s.projectId,
+        roleId: s.otherRoleId,
+      }),
+    ).rejects.toThrow(projectsErrors.defaultRoleNotFound);
+
+    authState.userId = s.roleHolderId;
+    await expect(
+      t.mutation(api.projects.setDefaultRole, {
+        id: s.projectId,
+        roleId: s.roleId,
+      }),
+    ).rejects.toThrow(projectsErrors.insufficientPermissions);
+  });
+
+  it("si el rol por defecto ya no existe, entrar no lo asigna", async () => {
+    const t = setupTest();
+    const s = await seedProject(t);
+    // Un rol borrado por fuera de `roles.remove`: el proyecto quedó
+    // apuntando a nada.
+    await t.run(async (ctx) => {
+      await ctx.db.patch(s.projectId, { defaultRoleId: s.roleId });
+      await ctx.db.patch(s.roleHolderMemberId, { customRoleId: undefined });
+      await ctx.db.delete(s.roleId);
+    });
+
+    authState.userId = s.outsiderId;
+    await t.mutation(api.projects.join, { joinCode: "abc123abc123" });
+    const member = await t.run((ctx) =>
+      ctx.db
+        .query("members")
+        .withIndex("projectId_userId", (q) =>
+          q.eq("projectId", s.projectId).eq("userId", s.outsiderId),
+        )
+        .unique(),
+    );
+    expect(member?.customRoleId).toBeUndefined();
+  });
+
+  it("eliminar el rol lo retira del proyecto y de las audiencias que lo nombran", async () => {
+    const t = setupTest();
+    const s = await seedProject(t);
+    const other = await t.run((ctx) =>
+      ctx.db.insert("roles", {
+        name: "Conductores",
+        projectId: s.projectId,
+        ...NO_PERMISSIONS,
+      }),
+    );
+    const { formId } = await seedForm(t, {
+      projectId: s.projectId,
+      createdBy: s.adminId,
+      sections: INSPECTION("sin-listado"),
+      audience: "roles",
+      audienceRoleIds: [s.roleId, other],
+    });
+
+    authState.userId = s.adminId;
+    await t.mutation(api.projects.setDefaultRole, {
+      id: s.projectId,
+      roleId: s.roleId,
+    });
+    await t.mutation(api.roles.remove, { id: s.roleId });
+
+    const { project, form } = await t.run(async (ctx) => ({
+      project: await ctx.db.get(s.projectId),
+      form: await ctx.db.get(formId),
+    }));
+    expect(project?.defaultRoleId).toBeUndefined();
+    // El formato sobrevive a un rol de su audiencia, y conserva los demás.
+    expect(form).toMatchObject({ audience: "roles", audienceRoleIds: [other] });
   });
 });

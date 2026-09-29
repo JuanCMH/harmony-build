@@ -1,11 +1,10 @@
 # Módulo de formatos — implementación
 
-**Fecha:** 2026-09-28 · **Estado:** propuesta · **Diseño:**
+**Fecha:** 2026-09-28 · **Estado:** implementado (2026-09-29) · **Diseño:**
 `2026-09-28-modulo-de-formatos-design.md`
 
-> Este plan no se ejecuta hasta que el diseño pase a `aprobado` (`05 §3.2`). Si
-> al aprobar cambia alguna de las decisiones de las preguntas abiertas 1 a 4,
-> las tareas marcadas con ◆ cambian con ella.
+> El diseño se aprobó el 2026-09-29 sin cambios en las preguntas abiertas 1 a
+> 4, así que las tareas marcadas con ◆ se ejecutan como están escritas.
 
 Contrato de datos primero, servidor después, interfaz al final. Cuatro
 entregas; cada una cierra con `bun run check`, `bun run test` y su recorrido en
@@ -19,9 +18,12 @@ el navegador, **en teléfono y en escritorio**. «Portar» significa copiar de
   con los catorce portados, `FIELD_SIZES`, operadores, recetas y sus tipos. Sin
   `TEMPLATE_SCOPES`, `templateScope` ni `FIELD_TYPE_SCOPES`. `FORM_LIMITS` con
   los techos del diseño §3. `FORM_KINDS` (`record`, `catalog`).
-- La configuración de un campo deja de ser un objeto plano compartido: unión
-  discriminada por tipo, para que los cuatro tipos nuevos entren sin añadir
-  claves opcionales a todos los demás.
+- La configuración de un campo **sigue siendo un objeto plano** (`FieldConfig`),
+  no una unión discriminada por tipo: lo que un campo hace —visibilidad,
+  derivado, valor sugerido— es común a casi todos, y así el motor y los
+  editores de Harmony se portan sin reescribirlos. Lo propio de cada tipo nuevo
+  va en **su** clave (`checklist`, `table`, `reference`, `signature`), y
+  `validateForm` exige esa clave en su tipo y la prohíbe en los demás.
 - `storedValue`: validador y tipo de la unión de valores del diseño §3, con
   sus ocho `kind`. En esta entrega se usan cinco (`text`, `number`, `boolean`,
   `list`, `file`); los otros tres se declaran ya para no migrar después.
@@ -249,3 +251,38 @@ fila, y diligenciarla con tres elementos.
 - Los dos planes pasan a `implementado` con la fecha (`05 §3`, paso 6).
 - Queda anotado qué formato del cliente no se pudo construir, si alguno, y por
   qué: es la entrada del plan siguiente.
+
+## Cierre (2026-09-29)
+
+Las cuatro entregas se implementaron juntas. Los quince formatos en papel del
+cliente se construyeron, más cinco listados, y viven como datos en
+`convex/sst_library/` (una prueba compara cada uno con el papel: número de
+ítems, relaciones y filas completas). Lo que no se pudo representar tal cual:
+
+- **SST-F-010**: el diagrama de posición de llantas no cabe en un formato; cada
+  posición dice en su etiqueta dónde está. Las variantes furgón (7 llantas) y
+  tráiler (posiciones 12 a 22) no se construyeron: salen de «Duplicar». La
+  posición 11 como «Repuesto» es una inferencia que SST debe confirmar.
+- **SST-F-118 y SST-F-075**: las filas en blanco para elementos adicionales no
+  existen; lo que sobra va en las observaciones.
+- **SST-F-038 y SST-F-115**: los ítems que dependen del tipo de equipo se
+  responden «N.A» (las reglas no entran dentro de una lista de chequeo).
+- **SST-F-046**: el consolidado mensual no es un formato, es una vista
+  calculada que llega con las gráficas. De sus anexos se construyeron el 1, 2,
+  3, 4 y 6; los totales mensuales y los días de ausencia no se calculan.
+- **SST-F-007**: la firma de quien recibe pide su nombre en cada fila, aunque
+  sea la misma persona, porque el servidor sólo firma como autor los campos,
+  no las celdas de una tabla.
+
+Diferencias con estas tareas, decididas al implementar:
+
+- `forms.ts` se partió en `forms.ts` y `formVersions.ts`, y los elementos de un
+  listado viven en `formEntries.ts`; el motor de Harmony se partió en
+  `field_logic`, `field_computed`, `form_evaluation` y `form_validation`
+  (`06 §3`).
+- `saveDraft` y `discardDraft` no escriben auditoría.
+- Un campo no se puede arrastrar a otra sección; los ítems de una lista de
+  chequeo y las columnas de una tabla se reordenan con «Subir» y «Bajar».
+- La instalación de la biblioteca (`formLibrary.installSst`) no estaba en el
+  plan: es interna y se ejecuta desde la línea de comandos.
+

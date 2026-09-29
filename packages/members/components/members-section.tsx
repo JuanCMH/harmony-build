@@ -15,14 +15,19 @@ import { useGetMembers } from "@/packages/members/api";
 import { useProjectId } from "@/packages/projects/store/use-project-id";
 import { usePermissions } from "@/packages/roles/store/use-permissions";
 import { User, UserPlus } from "lucide-react";
+import type { ReactNode } from "react";
 import { MEMBER_ROLE_LABELS } from "../lib/member-roles";
 
 export function MembersSection({
   onSelectMember,
   onInvite,
+  beforeList,
 }: {
   onSelectMember: (memberId: Id<"members">) => void;
   onInvite: () => void;
+  /** Lo que el área pone entre su cabecera y la lista: el rol por defecto.
+   *  Va dentro de la sección para quedar debajo del título de la pantalla. */
+  beforeList?: ReactNode;
 }) {
   const projectId = useProjectId();
   const { data: members, isLoading } = useGetMembers({ projectId });
@@ -47,6 +52,7 @@ export function MembersSection({
         ) : null
       }
     >
+      {beforeList}
       {isLoading ? (
         <CollectionLoading />
       ) : total === 0 ? (

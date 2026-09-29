@@ -84,12 +84,12 @@ crece por necesidad real, nunca por especulación.
 > `components/ui`, `components/harmony` y los `packages/*/components/` afines. Un
 > componente duplicado con otro nombre es peor que no tenerlo.
 
-Lo mismo vale para lo que las directrices dejan **pendiente del plan**: los
-colores de estado del dominio (`03 §1.4`), los iconos de las entidades nuevas y
-de los tipos de campo (`03 §5.2`, `03 §5.5`), las reglas del formulario de
-captura (`03 §6.2`) y las llaves de permiso (`01 §5.3`). El plan que las
-necesite las **decide**, y el cambio que lo implementa las escribe en la
-directriz correspondiente.
+Lo mismo vale para lo que una directriz todavía no fija —un color de estado
+nuevo (`03 §1.4`), el icono de una entidad o de un tipo de campo (`03 §5.2`,
+`03 §5.5`), una llave de permiso (`01 §5.3`)—: el plan que lo necesite lo
+**decide**, y el cambio que lo implementa lo escribe en la directriz
+correspondiente. Así se cerraron los del módulo de formatos
+(`docs/plans/2026-09-28-modulo-de-formatos-design.md`).
 
 ### Paso 4 · Planificar la implementación
 
