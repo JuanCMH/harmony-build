@@ -1,0 +1,400 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  /* Las dos familias las define `next/font` en `app/layout.tsx`. `font-mono`
+     no se declara: vale la pila monoespaciada por defecto de Tailwind. */
+  --font-poppins: var(--font-poppins);
+  --font-space-grotesk: var(--font-space-grotesk);
+  --font-sans: var(--font-poppins);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* Custom colors with variants */
+  --color-yellow: #ffb900; /* Amarillo */
+  --color-yellow-600: #cc9400;
+  --color-gold: #ff8c00; /* Dorado */
+  --color-gold-600: #cc7000;
+  --color-orange: #f7630c; /* Naranja */
+  --color-orange-600: #c54f0a;
+  --color-brown: #ca5010; /* Marrón */
+  --color-brown-600: #a2400d;
+  --color-red: #d13438; /* Rojo */
+  --color-red-600: #a72a2d;
+  --color-magenta: #e81123; /* Magenta */
+  --color-magenta-600: #ba0e1c;
+  --color-rose: #e74856; /* Rosa */
+  --color-rose-600: #b93a45;
+  --color-crimson: #c30052; /* Carmesí */
+  --color-crimson-600: #9c0042;
+  --color-orchid: #e3008c; /* Orquídea */
+  --color-orchid-600: #b60070;
+  --color-lilac: #b146c2; /* Lila */
+  --color-lilac-600: #8e389b;
+  --color-violet: #8764b8; /* Violeta */
+  --color-violet-600: #6c5093;
+  --color-purple: #9a0089; /* Púrpura */
+  --color-purple-600: #7b006d;
+  --color-iris: #6b69d6; /* Iris */
+  --color-iris-600: #5654ab;
+  --color-cobalt: #0078d7; /* Cobalto */
+  --color-cobalt-600: #0060ac;
+  --color-blue: #0099bc; /* Azul */
+  --color-blue-600: #007a96;
+  --color-turquoise: #00b7c3; /* Turquesa */
+  --color-turquoise-600: #00929c;
+  --color-mint: #018574; /* Menta */
+  --color-mint-600: #016a5d;
+  --color-kelly: #10893e; /* Kelly */
+  --color-kelly-600: #0d6e32;
+  --color-green: #107c10; /* Verde */
+  --color-green-600: #0d630d;
+  --color-moss: #498205; /* Musgo */
+  --color-moss-600: #3a6804;
+  --color-gray: #7a7574; /* Gris */
+  --color-gray-600: #625d5d;
+  --color-platinum: #69797e; /* Platino */
+  --color-platinum-600: #546165;
+  --color-lichen: #486860; /* Lichen */
+  --color-lichen-600: #3a534d;
+  --color-slate: #515c6b; /* Pizarra */
+  --color-slate-600: #414a56;
+
+  /* Harmony Colors */
+  --color-h-purple: #6f00ff;
+  --color-h-indigo: #818cf8;
+  --color-h-rose: #ff3f7f;
+  --color-h-yellow: #f1fa8c;
+
+  /* Deep brand surface — panel de marca de /auth y splash. Siempre oscura,
+     no depende del tema. */
+  --color-h-deep: #1a0040;
+  --color-h-deeper: #10002b;
+  --color-h-deepest: #0a0018;
+}
+
+:root {
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  /* Las superficies del tema oscuro, invertidas el 1 de septiembre de 2026.
+     Estaban al revés que la referencia declarada en `00 §2.6`: el chrome
+     —ventana y sidebar— era el gris claro (0.205) y el panel de contenido el
+     casi negro (0.145), así que lo que más pesaba visualmente era el marco y no
+     el trabajo. Linear hace lo contrario: chrome casi negro y panel levantado
+     sobre él. El contenido es lo que se mira. */
+  --background: oklch(0.19 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.225 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.225 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.12 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.24 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  /* Lo que se puede pulsar, se ve que se puede pulsar.
+   *
+   * El preflight de Tailwind v4 devuelve `cursor: default` a los botones, y por
+   * eso shadcn lleva un `cursor-pointer` suelto en su `Button`. Pero muchos
+   * controles de la aplicación son `<button>` crudos que no pasan por ese
+   * componente —los de `/auth`, los de las fichas— y ninguno mostraba la
+   * mano. Repetir la clase en cada uno es una lista que hay que acordarse de
+   * mantener; esto es una regla que ya no se puede olvidar.
+   *
+   * Va por elemento y no por clase para que también cubra lo que se escriba
+   * mañana. `:disabled` y `aria-disabled` quedan fuera a propósito: un control
+   * apagado no promete nada. */
+  button:not(:disabled):not([aria-disabled="true"]),
+  [role="button"]:not([aria-disabled="true"]),
+  label[for],
+  summary,
+  a[href] {
+    cursor: pointer;
+  }
+}
+
+/* El único paso por debajo de `text-xs` (12px).
+ *
+ * Existe para las superficies de máxima densidad, donde 12px no cabe. Es un
+ * solo escalón documentado en vez de tamaños escritos a mano (`text-[10px]`,
+ * que `scripts/check-estilo.mjs` rechaza), y 11px es el suelo por debajo del
+ * cual el texto deja de leerse.
+ *
+ * Fuera de esa densidad, la escala de `03 §4` sigue empezando en
+ * `text-xs`. */
+@theme inline {
+  --text-2xs: 0.6875rem; /* 11px */
+  --text-2xs--line-height: 1rem;
+}
+
+/* El escalón de interfaz, 13px.
+ *
+ * Entre `text-xs` (12px, metadato) y `text-sm` (14px, cuerpo) falta el tamaño
+ * con el que están escritas las herramientas densas de escritorio —Linear,
+ * Figma, Raycast—: el de una etiqueta de navegación o el dato secundario de una
+ * fila, que a 14px pesa como el cuerpo y a 12px se lee como una nota al pie. */
+@theme inline {
+  --text-ui: 0.8125rem; /* 13px */
+  --text-ui--line-height: 1.25rem;
+}
+
+/* Splash screen — el isotipo se dibuja, se rellena y se desvanece.
+   Cronología (entrada): 0–0,75 s trazo · 0,6–1,05 s relleno · 0,65–1,35 s
+   nombre. Después, un destello cada 2 s hasta que la app está lista. La
+   salida (`.splash-exit`) dura 420 ms: `EXIT_MS` en `splash-screen.tsx`. */
+.splash .splash-stroke {
+  fill-opacity: 0;
+  stroke-width: 0.35;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation:
+    splash-draw 0.75s cubic-bezier(0.65, 0, 0.35, 1) forwards,
+    splash-fill 0.45s ease-out 0.6s forwards;
+}
+
+.splash .splash-stroke-band {
+  animation-delay: 0.15s, 0.72s;
+}
+
+.splash .splash-sheen {
+  transform: translateX(-40px);
+  animation: splash-sheen 2s cubic-bezier(0.4, 0, 0.2, 1) 1s infinite;
+}
+
+.splash .splash-word {
+  clip-path: inset(0 100% 0 0);
+  animation: splash-wipe 0.7s cubic-bezier(0.65, 0, 0.35, 1) 0.65s forwards;
+}
+
+.splash-exit {
+  animation: splash-exit 0.42s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+@keyframes splash-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes splash-fill {
+  to {
+    fill-opacity: 1;
+    stroke-opacity: 0;
+  }
+}
+
+@keyframes splash-sheen {
+  0% {
+    transform: translateX(-40px);
+  }
+  55%,
+  100% {
+    transform: translateX(44px);
+  }
+}
+
+@keyframes splash-wipe {
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes splash-exit {
+  to {
+    opacity: 0;
+    transform: translateY(-3%) scale(1.02);
+    filter: blur(6px);
+  }
+}
+
+/* Sin movimiento: el logo y el nombre ya completos, y la salida es un
+   fundido. */
+@media (prefers-reduced-motion: reduce) {
+  .splash .splash-stroke {
+    animation: none;
+    fill-opacity: 1;
+    stroke-opacity: 0;
+    stroke-dashoffset: 0;
+  }
+  .splash .splash-sheen {
+    animation: none;
+  }
+  .splash .splash-word {
+    animation: none;
+    clip-path: none;
+  }
+  .splash-exit {
+    animation: splash-fade 0.42s linear forwards;
+  }
+}
+
+@keyframes splash-fade {
+  to {
+    opacity: 0;
+  }
+}
+
+/* Custom CSS */
+
+/* Native scrollbar styling */
+
+/* Firefox — uses standard properties */
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklch, var(--muted-foreground) 30%, transparent) transparent;
+  }
+}
+
+/* Chrome, Safari, Edge — webkit pseudo-elements for full control */
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: color-mix(in oklch, var(--muted-foreground) 30%, transparent);
+  border-radius: 9999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in oklch, var(--muted-foreground) 50%, transparent);
+}
+
+*::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* El degradado en movimiento de la marca: logotipo y panel de `/auth`. */
+@keyframes gradient-shift {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-gradient-shift {
+  animation: gradient-shift 6s ease-in-out infinite;
+}

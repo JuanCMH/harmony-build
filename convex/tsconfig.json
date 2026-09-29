@@ -1,0 +1,31 @@
+{
+  /* This TypeScript project config describes the environment that
+   * Convex functions run in and is used to typecheck them.
+   * You can modify it, but some settings required to use Convex.
+   */
+  "compilerOptions": {
+    /* These settings are not required by Convex and can be modified. */
+    "allowJs": true,
+    "strict": true,
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
+
+    /* These compiler options are required by Convex */
+    "target": "ESNext",
+    "lib": ["ES2021", "dom"],
+    "forceConsistentCasingInFileNames": true,
+    "module": "ESNext",
+    "isolatedModules": true,
+    "noEmit": true
+  },
+  "include": ["./**/*"],
+  /* `__tests__` queda fuera por la misma razón que `_generated`: el bundler de
+   * Convex ignora las carpetas que empiezan por `_`, así que no son funciones
+   * desplegadas. Y este tsconfig no declara el alias `@/`, de modo que las
+   * suites que importan de `packages/` —roles-authorization cierra el catálogo
+   * de permisos contra la UI— resolvían a `never` y rompían `convex dev` y
+   * `convex deploy` con 44 errores. El tsconfig raíz sí las typechequea. */
+  "exclude": ["./_generated", "./__tests__"]
+}

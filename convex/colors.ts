@@ -1,0 +1,28 @@
+import { v } from "convex/values";
+
+export const customColors = [
+  v.literal("yellow"),
+  v.literal("gold"),
+  v.literal("orange"),
+  v.literal("brown"),
+  v.literal("red"),
+  v.literal("magenta"),
+  v.literal("rose"),
+  v.literal("crimson"),
+  v.literal("orchid"),
+  v.literal("lilac"),
+  v.literal("violet"),
+  v.literal("purple"),
+  v.literal("iris"),
+  v.literal("cobalt"),
+  v.literal("blue"),
+  v.literal("turquoise"),
+  v.literal("mint"),
+  v.literal("kelly"),
+  v.literal("green"),
+  v.literal("moss"),
+  v.literal("gray"),
+  v.literal("platinum"),
+  v.literal("lichen"),
+  v.literal("slate"),
+];

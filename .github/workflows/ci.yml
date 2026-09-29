@@ -1,0 +1,45 @@
+# La puerta de entrada del repositorio.
+#
+# Comprueba lo mismo que se comprueba en local —`bun run check` y `bun run
+# test`—, y falla el pull request si algo no cuadra. Sin esto, las reglas de
+# `biome.json` y el trinquete de estilo dependen de que alguien se acuerde de
+# ejecutarlos.
+#
+# Los e2e **no** corren aquí: necesitan un despliegue de Convex propio y el
+# servidor de Next levantado. Se ejecutan en local con `bun run test:e2e`
+# mientras no exista ese despliegue de pruebas (ver 04 §3).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  # Un empujón nuevo sobre la misma rama cancela el anterior: lo que importa es
+  # el estado final, no la cola.
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Tipos, reglas y estilo
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun run check
+
+  test:
+    name: Pruebas
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun run test

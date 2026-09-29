@@ -1,0 +1,40 @@
+{
+  "name": "Harmony Build",
+  "short_name": "Harmony Build",
+  "description": "Plataforma para digitalizar los formatos de obra de las empresas de construcción.",
+  "dir": "auto",
+  "lang": "es-ES",
+  "display": "standalone",
+  "orientation": "any",
+  "scope": "/projects",
+  "start_url": "/projects",
+  "id": "/projects",
+  "theme_color": "#6F00FF",
+  "background_color": "#F1F1F1",
+  "icons": [
+    {
+      "src": "/web-app-manifest-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/web-app-manifest-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
