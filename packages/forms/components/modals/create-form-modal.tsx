@@ -160,9 +160,8 @@ export const CreateFormModal = ({
               className="grid gap-3 sm:grid-cols-2"
             >
               {KIND_OPTIONS.map((option) => {
-                const Icon = ENTITY_ICONS[
-                  option.kind === "record" ? "form" : "catalog"
-                ];
+                const Icon =
+                  ENTITY_ICONS[option.kind === "record" ? "form" : "catalog"];
                 const isSelected = kind === option.kind;
                 return (
                   // Un botón con papel de radio, y no un `input`: la opción

@@ -45,7 +45,9 @@ export const ChecklistFieldView = ({
     answerableItems(block).flatMap((item) => {
       const answer = answers.get(item.id);
       const option = optionByValue(config, answer?.value);
-      return option?.meaning === "fail" ? [{ block, item, answer, option }] : [];
+      return option?.meaning === "fail"
+        ? [{ block, item, answer, option }]
+        : [];
     }),
   );
 
@@ -142,7 +144,10 @@ export const ChecklistFieldView = ({
                 return (
                   <li
                     key={item.id}
-                    className={cn("space-y-1 px-3 py-2", item.indented && "pl-6")}
+                    className={cn(
+                      "space-y-1 px-3 py-2",
+                      item.indented && "pl-6",
+                    )}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <p className="text-ui leading-snug">{item.label}</p>

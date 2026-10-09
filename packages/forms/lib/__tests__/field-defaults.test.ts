@@ -43,10 +43,12 @@ describe("newOption", () => {
 });
 
 describe("newField", () => {
-  it("los tipos que ocupan la fila entera nacen en fila entera, y el resto en media", () => {
+  it("los tipos que ocupan la fila entera y la firma nacen en fila entera, y el resto en media", () => {
     for (const type of FIELD_TYPES) {
       expect(newField(type, "Campo").size).toBe(
-        FULL_WIDTH_TYPES.includes(type) ? "full" : "medium",
+        FULL_WIDTH_TYPES.includes(type) || type === "signature"
+          ? "full"
+          : "medium",
       );
     }
   });
@@ -190,7 +192,11 @@ describe("duplicateSection", () => {
                 match: "any",
                 rules: [
                   { fieldId: "@autor", operator: "isNotEmpty", values: [] },
-                  { fieldId: "de-otra-seccion", operator: "isNotEmpty", values: [] },
+                  {
+                    fieldId: "de-otra-seccion",
+                    operator: "isNotEmpty",
+                    values: [],
+                  },
                 ],
               },
             },

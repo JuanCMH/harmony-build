@@ -39,7 +39,9 @@ export const SubmitBar = ({
         aria-live="polite"
         className={cn(
           "text-center text-sm tabular-nums sm:text-right",
-          showMissing ? "font-medium text-destructive" : "text-muted-foreground",
+          showMissing
+            ? "font-medium text-destructive"
+            : "text-muted-foreground",
         )}
       >
         {summary}

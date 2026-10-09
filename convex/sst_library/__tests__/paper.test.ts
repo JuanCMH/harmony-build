@@ -113,15 +113,17 @@ describe.each(EACH_FORM)("%s", (_key, form) => {
     if (!INSPECTION_CATEGORIES.includes(form.category)) return;
 
     expect(checklistsOf(form).length).toBeGreaterThan(0);
-    const last = form.sections[form.sections.length - 1];
-    expect(last.fields.map((field) => field.type)).toEqual([
+    // Una inspección es una sola sección, que termina en las observaciones y
+    // la firma.
+    expect(form.sections).toHaveLength(1);
+    const closing = form.sections[0].fields.slice(-2);
+    expect(closing.map((field) => field.type)).toEqual([
       "textarea",
       "signature",
     ]);
-    const [notes, signature] = last.fields;
+    const [notes, signature] = closing;
     expect(notes.required).toBe(false);
     expect(signature.required).toBe(true);
     expect(signature.config.signature?.signer).toBe("author");
-    expect(form.sections.length).toBeLessThanOrEqual(4);
   });
 });

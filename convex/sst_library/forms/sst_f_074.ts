@@ -52,7 +52,7 @@ export const SST_F_074: LibraryForm = {
   description:
     "La revisión de un extintor con sus ocho criterios. Se diligencia una vez por cada extintor, y cada uno conserva su historial.",
   sections: sections(
-    section("identificacion", "Extintor e inspector", [
+    section("inspeccion", "Inspección", [
       reference(
         "Extintor",
         CATALOG.extinguishers,
@@ -66,20 +66,18 @@ export const SST_F_074: LibraryForm = {
       ),
       workCenter(),
       person("Quien inspecciona", ["cargo"], { id: "responsable" }),
-    ]),
-    section("inspeccion", "Inspección", [
-      checklist(
-        "Criterios de inspección",
-        { scale: SCALE_CNC, blocks },
-        { id: "inspeccion", description: "C: conforme. NC: no conforme." },
-      ),
       date("Fecha de próxima recarga", {
         id: "proxima-recarga",
         size: "medium",
         showInTable: true,
         description: "La que indica la etiqueta del extintor",
       }),
+      checklist(
+        "Criterios de inspección",
+        { scale: SCALE_CNC, blocks },
+        { id: "inspeccion", description: "C: conforme. NC: no conforme." },
+      ),
+      ...closing("Firma de quien inspecciona"),
     ]),
-    closing("Firma de quien inspecciona"),
   ),
 };

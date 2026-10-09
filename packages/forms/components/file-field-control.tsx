@@ -10,7 +10,11 @@ import { toast } from "sonner";
 
 import { acceptsFile, describeFormats } from "../lib/file-formats";
 import { isPendingFile, type PendingFile } from "../lib/file-value";
-import { TOUCH_QUERY, useMediaQuery } from "../lib/use-media-query";
+import {
+  DESKTOP_QUERY,
+  TOUCH_QUERY,
+  useMediaQuery,
+} from "../lib/use-media-query";
 
 interface FileFieldControlProps {
   id: string;
@@ -27,6 +31,9 @@ interface FileFieldControlProps {
   value: unknown;
   disabled: boolean;
   invalid: boolean;
+  /** Dentro de la celda de una tabla. En escritorio la tabla es una rejilla
+   *  de controles de una línea, y éste se pinta con su misma altura. */
+  inCell?: boolean;
   onChange: (value: PendingFile | undefined) => void;
 }
 
@@ -51,11 +58,15 @@ export const FileFieldControl = ({
   value,
   disabled,
   invalid,
+  inCell = false,
   onChange,
 }: FileFieldControlProps) => {
   const picker = useRef<HTMLInputElement>(null);
   const camera = useRef<HTMLInputElement>(null);
   const isTouch = useMediaQuery(TOUCH_QUERY);
+  // En el teléfono la tabla son tarjetas, con cada celda a lo ancho: ahí el
+  // control cabe entero.
+  const isCompact = useMediaQuery(DESKTOP_QUERY) && inCell;
 
   const isImage = kind === "image";
   const pending = isPendingFile(value) ? value : null;
@@ -105,6 +116,118 @@ export const FileFieldControl = ({
   const Icon = isImage ? ImageIcon : Paperclip;
   const showCamera = isImage && isTouch;
 
+  // El selector del navegador y la cámara: sólo el mecanismo. Quien se
+  // acciona son los botones.
+  const inputs = (
+    <>
+      <input
+        ref={picker}
+        id={id}
+        type="file"
+        className="sr-only"
+        // Quien se acciona es el botón de al lado; este campo es sólo el
+        // mecanismo del navegador, y dos paradas de tabulador para lo mismo
+        // confunden.
+        tabIndex={-1}
+        accept={isImage ? "image/*" : acceptedFormats?.join(",")}
+        disabled={disabled}
+        onChange={(event) => {
+          choose(event.target.files?.[0]);
+          // Sin esto, elegir otra vez el mismo archivo no avisa.
+          event.target.value = "";
+        }}
+      />
+      {showCamera && (
+        <input
+          ref={camera}
+          type="file"
+          className="sr-only"
+          tabIndex={-1}
+          aria-hidden
+          accept="image/*"
+          capture="environment"
+          disabled={disabled}
+          onChange={(event) => {
+            choose(event.target.files?.[0]);
+            event.target.value = "";
+          }}
+        />
+      )}
+    </>
+  );
+  const pickLabel = name
+    ? `Cambiar ${name}`
+    : `${isImage ? "Elegir foto" : "Adjuntar"}: ${label}`;
+
+  // En la celda de una tabla: una línea, con la altura de los campos de su
+  // fila. Lo que admite pasa al `title`; el nombre se recorta.
+  if (isCompact) {
+    return (
+      <div
+        className={cn(
+          "flex h-9 w-full max-w-72 min-w-0 items-center gap-2 rounded-md border pr-1 pl-2",
+          invalid && "border-destructive",
+        )}
+      >
+        {preview ? (
+          <img
+            src={preview}
+            alt={name ?? label}
+            className="size-6 shrink-0 rounded-sm border object-cover"
+          />
+        ) : (
+          <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+        )}
+        <p className="min-w-0 flex-1 truncate text-sm" title={name ?? accepts}>
+          {name ?? (
+            <span className="text-muted-foreground">
+              {isImage ? "Sin foto" : "Sin archivo"}
+            </span>
+          )}
+        </p>
+        {inputs}
+        {showCamera ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-7 shrink-0 text-muted-foreground"
+            aria-label={`Tomar foto: ${label}`}
+            disabled={disabled}
+            onClick={() => camera.current?.click()}
+          >
+            <Camera />
+          </Button>
+        ) : null}
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 shrink-0 px-2"
+          aria-label={pickLabel}
+          disabled={disabled}
+          onClick={() => picker.current?.click()}
+        >
+          <Upload />
+          {name ? "Cambiar" : isImage ? "Elegir" : "Adjuntar"}
+        </Button>
+        {name ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-7 shrink-0 text-muted-foreground hover:text-destructive"
+            aria-label={`Quitar ${name}`}
+            disabled={disabled}
+            onClick={() => onChange(undefined)}
+          >
+            <X />
+          </Button>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <div
       className={cn(
@@ -142,39 +265,7 @@ export const FileFieldControl = ({
         ) : null}
       </p>
 
-      <input
-        ref={picker}
-        id={id}
-        type="file"
-        className="sr-only"
-        // Quien se acciona es el botón de al lado; este campo es sólo el
-        // mecanismo del navegador, y dos paradas de tabulador para lo mismo
-        // confunden.
-        tabIndex={-1}
-        accept={isImage ? "image/*" : acceptedFormats?.join(",")}
-        disabled={disabled}
-        onChange={(event) => {
-          choose(event.target.files?.[0]);
-          // Sin esto, elegir otra vez el mismo archivo no avisa.
-          event.target.value = "";
-        }}
-      />
-      {showCamera && (
-        <input
-          ref={camera}
-          type="file"
-          className="sr-only"
-          tabIndex={-1}
-          aria-hidden
-          accept="image/*"
-          capture="environment"
-          disabled={disabled}
-          onChange={(event) => {
-            choose(event.target.files?.[0]);
-            event.target.value = "";
-          }}
-        />
-      )}
+      {inputs}
 
       <div className="flex shrink-0 items-center gap-2">
         {showCamera && (
@@ -194,9 +285,7 @@ export const FileFieldControl = ({
           type="button"
           variant="outline"
           className="h-10 sm:h-9"
-          aria-label={
-            name ? `Cambiar ${name}` : `${isImage ? "Elegir foto" : "Adjuntar"}: ${label}`
-          }
+          aria-label={pickLabel}
           disabled={disabled}
           onClick={() => picker.current?.click()}
         >

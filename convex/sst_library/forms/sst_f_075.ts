@@ -84,7 +84,7 @@ export const SST_F_075: LibraryForm = {
   description:
     "La revisión del botiquín de un centro de trabajo: dónde está, cómo está instalado y, elemento por elemento, cuánto hay, en qué estado y cuándo vence.",
   sections: sections(
-    section("identificacion", "Botiquín", [
+    section("inspeccion", "Inspección", [
       workCenter(),
       text("Ubicación", {
         required: true,
@@ -102,8 +102,6 @@ export const SST_F_075: LibraryForm = {
         { size: "small" },
       ),
       person("Responsable", ["cargo"], { id: "responsable" }),
-    ]),
-    section("inspeccion", "Inspección", [
       checklist(
         "Condiciones del botiquín",
         // La observación es opcional aquí: un botiquín portátil responde «No»
@@ -125,7 +123,7 @@ export const SST_F_075: LibraryForm = {
             "B: existe y está en buenas condiciones. M: está en mal estado o vencido.",
         },
       ),
+      ...closing("Firma del responsable"),
     ]),
-    closing("Firma del responsable"),
   ),
 };

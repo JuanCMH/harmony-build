@@ -99,7 +99,11 @@ app/
         └── [projectId]/
             ├── layout.tsx  # sidebar + chequeo de membresía
             ├── error.tsx
-            ├── page.tsx    # inicio del proyecto
+            ├── page.tsx    # inicio del proyecto, con el tablero
+            ├── formats/    # módulo de formatos
+            │   └── [formId]/
+            │       ├── results/  # resultados del formato
+            │       └── …         # el resto de sus rutas
             ├── registros/  # auditoría
             └── ajustes/    # ajustes del proyecto
                 ├── usuarios/
@@ -111,7 +115,8 @@ app/
 | `/auth` | Autenticación. La única ruta pública. |
 | `/` | Redirige a `/projects`. |
 | `/projects` | Redirige al primer proyecto activo de quien entra, o abre la bienvenida (crear un proyecto o unirse con un código). |
-| `/projects/[projectId]` | Inicio del proyecto. |
+| `/projects/[projectId]` | Inicio del proyecto: lo que hay para diligenciar y, para quien tiene `viewResponses`, el tablero. |
+| `/projects/[projectId]/formats/[formId]/results` | Los resultados de un formato, calculados para un rango de fechas, y dónde se definen (`editForms`). |
 | `/projects/[projectId]/registros` | Auditoría (exige `viewLogs`, `01 §5.5`). |
 | `/projects/[projectId]/ajustes` | Ajustes del proyecto. |
 | `/projects/[projectId]/ajustes/usuarios` | Miembros. |
@@ -217,7 +222,7 @@ packages/<feature>/
 > (+ `modals/`, `sheets/` dentro de components). No `dialogs/`, no `views/`, no
 > `utils/`, no `hooks/`. En la raíz del paquete solo `api.ts` y `types.ts`.
 
-**Inventario de la fase base (6 paquetes):**
+**Inventario (8 paquetes):**
 
 | Paquete | Qué contiene |
 |---|---|
@@ -227,6 +232,8 @@ packages/<feature>/
 | `members` | Miembros del proyecto y su perfil. |
 | `roles` | Roles personalizados, el catálogo de permisos de la interfaz y `RoleGate`. |
 | `logs` | La vista de auditoría. |
+| `forms` | El módulo de formatos: constructor, diligenciar, respuestas y listados. También los **resultados** de un formato: su catálogo, su editor, la tarjeta que los pinta (`result-*.tsx`) y el rango de fechas con que se miran. |
+| `dashboard` | El tablero del proyecto: sus pestañas, sus widgets y su editor. No pinta resultados por su cuenta: usa la tarjeta y el rango de `forms`. |
 
 No todos tienen todos los directorios: sólo lo que la feature necesita.
 
@@ -264,7 +271,9 @@ entiende solo; `utils/` o `views/` sólo reordenan archivos.
   paquetes.
 - **Hubs** (importados por los demás): `projects`, `roles` y `members`. Son los
   que dan el proyecto actual, el miembro actual y el gate de permisos.
-- **Hojas**: `logs` y `users` no deberían ser importados por los hubs.
+- **Hojas**: `logs`, `users` y `dashboard` no deberían ser importados por los
+  hubs. `dashboard` importa de `forms` y de `projects`, y sólo lo monta la
+  página de inicio del proyecto.
 - Un import nuevo **desde** un hub **hacia** un paquete de feature merece una
   segunda mirada: es como un hub se convierte en un nudo. Cuando llegue el
   módulo de formatos, sus paquetes importan de los hubs, no al revés.
@@ -415,7 +424,7 @@ ancho (`00 §2.3`):
 |---|---|---|---|
 | **Captura**: el formulario que se diligencia | Conductores, operarios, inspectores; a diario, en la obra, con prisa | **Pantalla estrecha** (teléfono, 390px) | Funcionar en escritorio sin estirarse hasta ser ilegible |
 | **Administración**: proyecto, miembros, roles, diseño de formatos, auditoría | Propietario y administradores; SST, calidad, dirección de obra | **Pantalla ancha** (escritorio) | Funcionar en tablet y en teléfono: ninguna acción queda inalcanzable |
-| **Consulta**: respuestas y, después, gráficas | Quien revisa | Se decide en el plan de cada vista | — |
+| **Consulta**: respuestas, resultados y tablero | Quien revisa | Se decide en el plan de cada vista. Los resultados y el tablero, para **pantalla ancha**: su retícula de doce se decide en escritorio | En teléfono y tableta, cada tarjeta ocupa la fila entera |
 
 «Se diseña primero para» significa que ése es el tamaño en el que se toman las
 decisiones de estructura —qué va arriba, qué se oculta, cuántas columnas—, y el
@@ -440,6 +449,13 @@ No se usa Redux, Zustand ni Context para estado de datos.
 **Regla de URL**: el período seleccionado y los filtros de un listado viven en la
 URL. Un enlace compartido debe reproducir la misma pantalla. Nada de estado de
 vista en `localStorage` que pueda contradecir un enlace.
+
+Los resultados y el tablero la siguen con tres claves: `desde` y `hasta`, el
+rango de fechas (`packages/forms/store/use-results-range.ts`), y `pestana`, la
+pestaña del tablero (`packages/dashboard/store/use-dashboard-tab.ts`). La
+dirección la escribe cualquiera: un valor que no es una fecha, o un rango al
+revés, cae en el de omisión —los últimos 30 días—, y eso lo decide una función
+pura con su prueba (`packages/forms/lib/results-range.ts`), no el componente.
 
 ---
 

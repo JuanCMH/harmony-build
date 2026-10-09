@@ -66,17 +66,15 @@ export const SST_F_031: LibraryForm = {
   description:
     "La inspección del equipo de soldadura, de la protección del soldador y del área de trabajo antes de soldar: una por equipo y por día.",
   sections: sections(
-    section("identificacion", "Equipo y lugar", [
+    section("inspeccion", "Inspección", [
       equipment("Equipo de soldadura"),
       workCenter(),
-    ]),
-    section("inspeccion", "Inspección", [
       checklist(
         "Estado del equipo y del área",
         { scale: SCALE_BMNA, blocks },
         { id: "inspeccion" },
       ),
+      ...closing("Firma del operador"),
     ]),
-    closing("Firma del operador"),
   ),
 };

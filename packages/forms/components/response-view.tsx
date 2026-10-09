@@ -7,7 +7,12 @@ import { useProjectId } from "@/packages/projects/store/use-project-id";
 import { usePermissions } from "@/packages/roles/store/use-permissions";
 import { useMemo } from "react";
 
-import { FIELD_GRID, FIELD_SIZE_SPAN } from "../lib/grid";
+import {
+  FIELD_CELL,
+  FIELD_CELL_LABEL,
+  FIELD_GRID,
+  FIELD_SIZE_SPAN,
+} from "../lib/grid";
 import {
   type ValueViewContext,
   fileUrlsById,
@@ -105,12 +110,14 @@ export const ResponseView = ({ response }: ResponseViewProps) => {
             {fields.map((field) => (
               <div
                 key={field.id}
-                className={cn(
-                  "min-w-0 space-y-1.5",
-                  FIELD_SIZE_SPAN[field.size],
-                )}
+                className={cn(FIELD_CELL, FIELD_SIZE_SPAN[field.size])}
               >
-                <dt className="text-xs text-muted-foreground">
+                <dt
+                  className={cn(
+                    FIELD_CELL_LABEL,
+                    "text-xs text-muted-foreground",
+                  )}
+                >
                   {field.label}
                 </dt>
                 <dd>

@@ -55,23 +55,21 @@ export const SST_F_065: LibraryForm = {
   description:
     "La revisión del kit de derrames de un centro de trabajo: dónde está, en qué estado y si tiene todo lo que debe contener.",
   sections: sections(
-    section("identificacion", "Lugar y responsable", [
+    section("inspeccion", "Inspección", [
       workCenter(),
       person("Responsable de la inspección", ["cargo"], {
         id: "responsable",
         showInTable: true,
       }),
-    ]),
-    section("inspeccion", "Inspección", [
       checklist(
         "Estado y contenido del kit",
         { scale: SCALE_SNNA, blocks },
         { id: "inspeccion" },
       ),
+      ...closing(
+        "Firma de quien realiza la inspección",
+        observations("Recomendaciones"),
+      ),
     ]),
-    closing(
-      "Firma de quien realiza la inspección",
-      observations("Recomendaciones"),
-    ),
   ),
 };

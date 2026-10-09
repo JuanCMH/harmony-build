@@ -2,7 +2,7 @@ import { FULL_WIDTH_TYPES, type FormField } from "@/convex/lib/form_types";
 import { cn } from "@/lib/utils";
 import type { ReactNode } from "react";
 
-import { FIELD_SIZE_SPAN } from "../lib/grid";
+import { FIELD_CELL, FIELD_CELL_LABEL, FIELD_SIZE_SPAN } from "../lib/grid";
 import { fieldFrameId } from "../lib/field-dom";
 import type { SubmissionProblem } from "../lib/submission-problems";
 
@@ -41,7 +41,8 @@ export const FormFieldFrame = ({
       // lector de pantalla lee entonces la etiqueta y el error.
       tabIndex={-1}
       className={cn(
-        "min-w-0 scroll-mt-28 space-y-1.5 outline-none",
+        FIELD_CELL,
+        "scroll-mt-28 outline-none",
         // Una lista de chequeo o una tabla no caben en menos de una fila,
         // diga lo que diga el tamaño guardado.
         FIELD_SIZE_SPAN[
@@ -49,7 +50,7 @@ export const FormFieldFrame = ({
         ],
       )}
     >
-      <div className="space-y-0.5">
+      <div className={cn(FIELD_CELL_LABEL, "space-y-0.5")}>
         <label
           htmlFor={controlId}
           className="block text-sm font-medium leading-snug"
@@ -71,16 +72,20 @@ export const FormFieldFrame = ({
           </p>
         ) : null}
       </div>
-      {children}
-      {showsError ? (
-        <p
-          id={errorId}
-          role="alert"
-          className="text-xs font-medium text-destructive"
-        >
-          {problem.message}
-        </p>
-      ) : null}
+      {/* El error va con el control, en su misma pista: una tercera pista
+          vacía le añadiría un hueco a cada fila sin errores. */}
+      <div className="min-w-0 space-y-1.5">
+        {children}
+        {showsError ? (
+          <p
+            id={errorId}
+            role="alert"
+            className="text-xs font-medium text-destructive"
+          >
+            {problem.message}
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 };

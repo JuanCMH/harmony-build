@@ -223,7 +223,9 @@ export const FormForm = ({
     <Tabs value={activeTab} onValueChange={setTab} className="gap-0">
       <TabsList aria-label="Secciones del formato">
         {visible.map(({ section }) => {
-          const pending = showMissing ? (countBySection.get(section.id) ?? 0) : 0;
+          const pending = showMissing
+            ? (countBySection.get(section.id) ?? 0)
+            : 0;
           return (
             <TabsTrigger key={section.id} value={section.id} className="px-3">
               {section.label}
@@ -240,7 +242,11 @@ export const FormForm = ({
         })}
       </TabsList>
       {visible.map((entry) => (
-        <TabsContent key={entry.section.id} value={entry.section.id} className="mt-3">
+        <TabsContent
+          key={entry.section.id}
+          value={entry.section.id}
+          className="mt-3"
+        >
           {renderFields(entry)}
         </TabsContent>
       ))}

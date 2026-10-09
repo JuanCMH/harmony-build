@@ -92,6 +92,8 @@ tienen. Casos vigentes:
 | `convex/lib/error_messages.ts` | mensaje de los `ConvexError` | texto de validación previa al envío (`authErrors.weakPassword` en `/auth`) |
 | `convex/lib/join_codes.ts` | `projects.create` y `projects.newJoinCode` generan el código con `JOIN_CODE_LENGTH` | todo formulario que pida el código valida contra la misma longitud |
 | `convex/permissions.ts` | `permissionsSchema` en el schema y en los `args` de `roles.*` | `packages/roles/lib/permissions.ts`, **sólo con `import type`** (§5.3) |
+| `convex/lib/result_types.ts`, `result_definition.ts` | `formResults.create` y `update` validan la definición con `resultProblem`; `compute` dice con ella qué resultado quedó sin su campo | el editor de resultados ofrece los mismos tipos, operaciones y campos, y valida antes de enviar (`packages/forms/lib/result-draft.ts`) |
+| `convex/lib/date_buckets.ts` | `result_compute.ts` agrupa por día, semana o mes; `formResults.compute` mide el rango | `packages/forms/lib/results-range.ts` calcula los atajos del rango |
 
 La razón es la de §5: si la regla vive dos veces, una de las dos se queda atrás,
 y la que se queda atrás siempre es la del servidor. Esto **no** relaja §2: sigue
@@ -134,6 +136,13 @@ convex/
 │                           #   autorización (§5.2)
 ├── logs.ts                 # auditoría: `create` interna, `writeSystemLog`
 │                           #   y las lecturas (§5.5)
+├── formResults.ts          # los resultados de un formato: definirlos y
+│                           #   calcularlos para un rango de fechas (§6)
+├── dashboards.ts           # el tablero del proyecto: leerlo y guardarlo
+├── formLibrary.ts          # `installSst`, interna: instala la biblioteca
+│                           #   SST, con sus resultados y su tablero
+├── demoData.ts             # siembra de demostración; sólo funciones
+│                           #   internas (`04 §7`)
 ├── users.ts                # perfil del propio usuario
 ├── upload.ts               # URL de subida al storage (exige sesión)
 ├── auth.ts / auth.config.ts# @convex-dev/auth (§9)
@@ -146,7 +155,22 @@ convex/
 │   ├── join_codes.ts       #   JOIN_CODE_LENGTH
 │   ├── password_policy.ts  #   la política de contraseñas (§9.2)
 │   ├── dates.ts            #   todayInColombia
+│   ├── date_buckets.ts     #   fechas de negocio agrupadas por día, semana
+│   │                       #     o mes; puro
+│   ├── result_types.ts     #   los nueve tipos de resultado, sus piezas, sus límites y lo
+│   │                       #     que devuelve cada uno; puro (§2.2)
+│   ├── result_definition.ts#   qué puede pedir un resultado de un formato:
+│   │                       #     `resultProblem`, `resultName`; puro (§2.2)
+│   ├── result_compute.ts   #   `computeResult`: de las respuestas de un
+│   │                       #     rango a lo que pinta una gráfica; puro
+│   ├── result_validators.ts#   validadores de `formResults.config` y de
+│   │                       #     `dashboards.tabs`; `WIDGET_SIZES`
 │   └── text.ts             #   normalizeText, isSameName
+│
+├── sst_library/            # la biblioteca de formatos SST: datos, no
+│   │                       #   funciones
+│   └── results.ts          #   `SST_RESULTS` y `SST_DASHBOARD`: los
+│                           #     resultados y el tablero que instala
 │
 └── __tests__/              # pruebas con convex-test (ver 04)
     └── helpers.ts          #   montaje y siembra compartidos
@@ -327,6 +351,7 @@ así que sustituye al gate de lectura, no se suma a él.
 | Cambiar `members.role` (ascender a administrador o degradar), expulsar a un administrador | llave **más** `isProjectAdmin` | Ver el aviso de escalada, abajo. |
 | `members.remove` sobre uno mismo | sólo pertenencia | Salir por cuenta propia no pide llave. |
 | `users.updateName`, `users.updateImage`, `users.current` | sólo sesión | Es el perfil de quien llama; el `userId` sale de la sesión. |
+| `formLibrary.installSst`, `demoData.seedDay`, `writeDay`, `filesFor` | **internas** (`internalMutation`, `internalAction`, `internalQuery`) | No tienen sesión ni llave: las ejecuta quien administra el deployment con `bunx convex run`, y la aplicación no las alcanza. No son una superficie sin sesión (§5.7). |
 
 > [!CAUTION]
 > `checkPermission` es `async`. **Sin `await` devuelve una `Promise`, que es
@@ -366,7 +391,7 @@ sin documentos previos, así que no hay rol que pueda carecer de una.
 
 | Dominio | Llave | Qué gobierna (el `checkPermission` que la consume) |
 |---|---|---|
-| **Proyecto** | `editProject` | `projects.update`: nombre, código, colores, logo, archivar y reactivar. |
+| **Proyecto** | `editProject` | `projects.update`: nombre, código, colores, logo, archivar y reactivar. `dashboards.save`: armar el tablero. |
 | | `inviteUsers` | `projects.getJoinCode` y `projects.newJoinCode` (§5.8). |
 | | `expelUsers` | `members.remove` sobre otra persona. |
 | **Roles** | `createRoles` | `roles.create`. |
@@ -375,17 +400,19 @@ sin documentos previos, así que no hay rol que pueda carecer de una.
 | | `assignRoles` | `members.update`: asignar o quitar un rol personalizado. |
 | **Auditoría** | `viewLogs` | `logs.getByProject`, `logs.getLogDetails`. |
 | **Formatos** | `createForms` | `forms.create`, `forms.duplicate`. |
-| | `editForms` | `formVersions.saveDraft`, `publish`, `discardDraft`, `getDraft`; `forms.updateDetails`, `setTitleField`; `formCategories.*`; `forms.listCatalogs`. |
+| | `editForms` | `formVersions.saveDraft`, `publish`, `discardDraft`, `getDraft`; `forms.updateDetails`, `setTitleField`; `formCategories.*`; `forms.listCatalogs`; `formResults.create`, `update`, `remove`. |
 | | `deleteForms` | `forms.archive`, `unarchive`, `remove`. |
 | | `fillForms` | `formResponses.submit` (con la audiencia del formato), `formFiles.generateUploadUrl`, `formEntries.searchEntries`. Sin `viewResponses`, `formResponses.list` devuelve sólo las propias. |
-| | `viewResponses` | `formResponses.list` y `getById` de las respuestas de todos; `formEntries.listEntries`, `listEntryHistory`. |
+| | `viewResponses` | `formResponses.list` y `getById` de las respuestas de todos; `formEntries.listEntries`, `listEntryHistory`; `formResults.compute` y `dashboards.get`, que son agregados de ellas. |
 | | `voidResponses` | `formResponses.void`. |
-| | `editCatalogs` | `formEntries.createEntry`, `updateEntry`, `setEntryActive`; lectura de todos los elementos de un listado. |
+| | `editCatalogs` | `formEntries.createEntry`, `updateEntry`, `setEntryActive`; lectura de todos los elementos de un listado, y con ella `formResults.compute` sobre un listado. |
 
 Quien tiene `createForms`, `editForms` o `deleteForms` ve además los
 borradores. Las reglas de acceso completas del módulo están en
 `docs/plans/2026-09-28-modulo-de-formatos-design.md` («Reglas de acceso») y se
-implementan en un solo sitio, `convex/lib/form_access.ts`.
+implementan en un solo sitio, `convex/lib/form_access.ts`. Las de resultados y
+tablero, en `docs/plans/2026-10-09-resultados-y-tablero-design.md` («Reglas de
+acceso»): no añaden llaves.
 
 Al añadir una llave nueva:
 
@@ -594,11 +621,17 @@ evitarlo, por orden de preferencia:
    índice lo lleva como último campo (`["projectId", "date"]`).
 2. **Paginación**, cuando no hay un período natural que acote.
 3. **Conteo acotado con degradación declarada**: `.take(CAP + 1)` y decir «más
-   de `CAP`», nunca `.collect().length` (§6.1).
+   de `CAP`», nunca `.collect().length` (§6.1). Es también la forma de un
+   **cálculo** acotado: `formResults.compute` lee las respuestas de un formato
+   dentro del rango de fechas (forma 1, índice `formId_date`), hasta 300
+   (`RESPONSES_CAP`) y con un rango de 400 días como mucho, y devuelve
+   `capped: true` cuando las cifras son de una parte del rango.
 4. **Un resumen mantenido al escribir** (un agregado, o una tabla derivada que
    se actualiza en la misma transacción que el dato). Hoy no existe ninguno.
-   Si las gráficas lo necesitan, entra con su plan, cumple §7.3 y actualiza
-   `00 §5` si trae una dependencia.
+   Es el paso siguiente previsto para los resultados, cuando un formato toque
+   el tope de la forma 3: un resumen diario por formato
+   (`docs/plans/2026-10-09-resultados-y-tablero-design.md §9`). Entra con su
+   plan, cumple §7.3 y actualiza `00 §5` si trae una dependencia.
 
 `.collect()` sin acotar queda reservado a conjuntos que **no** crecen con la
 operación: los miembros y los roles de un proyecto.
@@ -698,12 +731,18 @@ Derivada del schema, padre por padre. «Anular» significa `patch` del campo a
 
 | Padre | Hijos que cascadean | Hijos que se anulan |
 |---|---|---|
-| `projects` | `members`, `roles`, `logs`, su `logo` en `_storage` | — |
+| `projects` | `members`, `roles`, `logs`, `formResults`, `dashboards`, su `logo` en `_storage` | — |
+| `forms` | `formResults` *(y sus `formVersions`; un formato con respuestas no se elimina, se archiva)* | — |
+| `formResults` | — *(un widget de `dashboards.tabs` que lo señala deja de leerse: `dashboards.get` lo filtra)* | — |
 | `roles` | — | `members.customRoleId` |
 | `members` | — | — *(los `logs` que lo nombran se conservan)* |
 | `users` | *(fuera de alcance: identidad, no dominio)* | — |
 
-Las tablas del módulo de formatos entran en esta tabla al implementarse.
+`formResults` y `dashboards` cuelgan de `projectId` y están en la lista de
+tablas ligeras de `purgeProjectData` (`LIGHT_TABLES`, `convex/projects.ts`).
+El resto de las tablas del módulo de formatos —`formCategories`,
+`formVersions`, `formResponses`, `formResponseLinks`— está en la purga y
+todavía no en esta tabla.
 
 ---
 

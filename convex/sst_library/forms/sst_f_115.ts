@@ -82,7 +82,7 @@ export const SST_F_115: LibraryForm = {
   description:
     "La inspección de la pulidora neumática, la pistola neumática, el motortool y el compresor que los alimenta, antes de usarlos: una por día.",
   sections: sections(
-    section("identificacion", "Lugar y equipos", [
+    section("inspeccion", "Inspección", [
       workCenter(),
       equipment("Pulidora neumática", {
         id: "equipo-pulidora",
@@ -93,8 +93,6 @@ export const SST_F_115: LibraryForm = {
         required: false,
       }),
       equipment("Compresor", { id: "equipo-compresor", required: false }),
-    ]),
-    section("inspeccion", "Inspección", [
       checklist(
         "Estado de las herramientas",
         { scale: SCALE_BMNA, blocks },
@@ -104,7 +102,7 @@ export const SST_F_115: LibraryForm = {
             "Si hoy no se usa alguno de los equipos, marca N.A en los ítems de su bloque.",
         },
       ),
+      ...closing("Firma del operario"),
     ]),
-    closing("Firma del operario"),
   ),
 };

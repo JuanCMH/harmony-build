@@ -39,7 +39,10 @@ export const FillableFormsPanel = ({ className }: { className?: string }) => {
         <div className="divide-y divide-border/60" aria-busy="true">
           <span className="sr-only">Cargando los formatos…</span>
           {[0, 1, 2].map((row) => (
-            <div key={row} className="flex min-h-14 flex-col justify-center gap-1.5 px-4 py-2">
+            <div
+              key={row}
+              className="flex min-h-14 flex-col justify-center gap-1.5 px-4 py-2"
+            >
               <Skeleton className="h-4 w-56" />
               <Skeleton className="h-3 w-40" />
             </div>

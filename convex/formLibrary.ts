@@ -28,7 +28,10 @@ import { brandValues, resolveValues, writeLinks } from "./lib/form_values";
 import { toStoredValues } from "./lib/stored_values";
 import { isSameName } from "./lib/text";
 import { writeSystemLog } from "./logs";
+import { dashboardOf } from "./dashboards";
+import { resultsOf } from "./formResults";
 import { SST_LIBRARY } from "./sst_library";
+import { SST_DASHBOARD, SST_RESULTS } from "./sst_library/results";
 import {
   LIBRARY_REFERENCE_PREFIX,
   type LibraryEntry,
@@ -108,7 +111,10 @@ async function findOrCreateCategory(
   const existing = categories.find((category) =>
     isSameName(category.name, name),
   );
-  return existing?._id ?? (await ctx.db.insert("formCategories", { projectId, name }));
+  return (
+    existing?._id ??
+    (await ctx.db.insert("formCategories", { projectId, name }))
+  );
 }
 
 /** El formato del proyecto que ya es este de la biblioteca: el mismo código
@@ -183,13 +189,92 @@ async function republish(
     publishedAt: Date.now(),
     publishedBy: form.createdBy,
   });
-  if (form.draftVersionId) await ctx.db.patch(form.draftVersionId, { sections });
+  if (form.draftVersionId)
+    await ctx.db.patch(form.draftVersionId, { sections });
   await ctx.db.patch(form._id, {
     publishedVersionId,
     publishedVersionNumber: number,
     referencedFormIds: deriveReferencedForms(ctx, sections),
   });
   return true;
+}
+
+/**
+ * Instala los resultados de la biblioteca en los formatos ya instalados y, si
+ * el proyecto todavía no tiene tablero, el de la biblioteca. Un resultado que
+ * ya está —mismo formato y mismo nombre— no se vuelve a crear, y un tablero
+ * que alguien armó no se pisa.
+ */
+async function installResults(
+  ctx: MutationCtx,
+  project: Doc<"projects">,
+  installed: Map<string, Installed>,
+) {
+  const ids = new Map<string, Id<"formResults">>();
+  let created = 0;
+  // Las cifras compuestas van al final: nombran otros resultados de la
+  // biblioteca, que para entonces ya tienen su identificador.
+  const ordered = [
+    ...SST_RESULTS.filter((library) => library.config.type !== "composite"),
+    ...SST_RESULTS.filter((library) => library.config.type === "composite"),
+  ];
+  for (const library of ordered) {
+    const formId = installed.get(library.form)?.formId;
+    if (!formId) continue;
+    const existing = await resultsOf(ctx, formId);
+    const already = existing.find((result) =>
+      isSameName(result.name, library.name),
+    );
+    if (already) {
+      ids.set(library.key, already._id);
+      continue;
+    }
+    let config = library.config;
+    if (config.type === "composite") {
+      const terms = config.terms.map((term) =>
+        term.type === "result"
+          ? { ...term, resultId: ids.get(term.resultId) ?? "" }
+          : term,
+      );
+      // Sin alguno de sus indicadores no hay cuenta que hacer.
+      if (
+        terms.some((term) => term.type === "result" && term.resultId === "")
+      ) {
+        continue;
+      }
+      config = { ...config, terms };
+    }
+    ids.set(
+      library.key,
+      await ctx.db.insert("formResults", {
+        projectId: project._id,
+        formId,
+        name: library.name,
+        config,
+        createdBy: project.userId,
+      }),
+    );
+    created += 1;
+  }
+
+  let dashboard = false;
+  if (!(await dashboardOf(ctx, project._id))) {
+    await ctx.db.insert("dashboards", {
+      projectId: project._id,
+      tabs: SST_DASHBOARD.map((tab) => ({
+        id: tab.id,
+        label: tab.label,
+        widgets: tab.widgets.flatMap((widget, index) => {
+          const resultId = ids.get(widget.result);
+          return resultId
+            ? [{ id: `${tab.id}-${index}`, resultId, size: widget.size }]
+            : [];
+        }),
+      })),
+    });
+    dashboard = true;
+  }
+  return { created, dashboard };
 }
 
 export const installSst = internalMutation({
@@ -208,6 +293,8 @@ export const installSst = internalMutation({
     updated: v.array(v.string()),
     skipped: v.array(v.string()),
     entries: v.number(),
+    /** Cuántos resultados se crearon, y si se instaló el tablero. */
+    results: v.object({ created: v.number(), dashboard: v.boolean() }),
   }),
   handler: async (ctx, args) => {
     const project = await ctx.db.get(args.projectId);
@@ -228,6 +315,11 @@ export const installSst = internalMutation({
       const already = findInstalled(existing, library);
       if (already) {
         installed.set(library.key, { formId: already._id, entries: new Map() });
+        // La descripción se lee sobre el formulario: si la biblioteca la
+        // corrigió, la instalada no puede seguir diciendo lo de antes.
+        if (args.update && already.description !== library.description) {
+          await ctx.db.patch(already._id, { description: library.description });
+        }
         const republished =
           args.update && (await republish(ctx, already, library, installed));
         (republished ? updated : skipped).push(library.name);
@@ -329,6 +421,8 @@ export const installSst = internalMutation({
       await ctx.db.patch(formId, { responseCount: record.entries.size });
     }
 
+    const results = await installResults(ctx, project, installed);
+
     if (updated.length > 0) {
       await writeSystemLog(ctx, {
         description: `Biblioteca de formatos SST actualizada: ${updated.join(", ")}`,
@@ -349,6 +443,6 @@ export const installSst = internalMutation({
       });
     }
 
-    return { created, updated, skipped, entries };
+    return { created, updated, skipped, entries, results };
   },
 });

@@ -82,9 +82,9 @@ describe("newScaleOption", () => {
 
 describe("parseChecklistItems", () => {
   it("una línea es un ítem, y las vacías se ignoran", () => {
-    expect(shape(parseChecklistItems("Aceite motor\n\n  \nRefrigerante\n"))).toEqual(
-      [[{ label: "Aceite motor" }, { label: "Refrigerante" }]],
-    );
+    expect(
+      shape(parseChecklistItems("Aceite motor\n\n  \nRefrigerante\n")),
+    ).toEqual([[{ label: "Aceite motor" }, { label: "Refrigerante" }]]);
   });
 
   it("una línea que acaba en «:» agrupa a las que siguen con sangría o guion", () => {
@@ -130,15 +130,18 @@ describe("parseChecklistItems", () => {
   it("un bloque nuevo corta el grupo: el subítem no hereda el del anterior", () => {
     const text = "Luces:\n- Altas\n\n- Pito";
     expect(shape(parseChecklistItems(text, { splitBlocks: true }))).toEqual([
-      [{ label: "Luces", heading: true }, { label: "Altas", indented: true }],
+      [
+        { label: "Luces", heading: true },
+        { label: "Altas", indented: true },
+      ],
       [{ label: "Pito" }],
     ]);
   });
 
   it("de una fila copiada de una hoja de cálculo toma la primera celda", () => {
-    expect(shape(parseChecklistItems("Aceite motor\tB\tM\tN.A\r\nFrenos\t\t"))).toEqual(
-      [[{ label: "Aceite motor" }, { label: "Frenos" }]],
-    );
+    expect(
+      shape(parseChecklistItems("Aceite motor\tB\tM\tN.A\r\nFrenos\t\t")),
+    ).toEqual([[{ label: "Aceite motor" }, { label: "Frenos" }]]);
   });
 
   it("da un id distinto a cada ítem", () => {

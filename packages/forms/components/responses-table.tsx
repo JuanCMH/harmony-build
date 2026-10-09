@@ -102,7 +102,11 @@ const VoidedBadge = () => (
 );
 
 const TableLoading = () => (
-  <div aria-busy="true" aria-live="polite" className="divide-y divide-border/60">
+  <div
+    aria-busy="true"
+    aria-live="polite"
+    className="divide-y divide-border/60"
+  >
     <span className="sr-only">Cargando las respuestas…</span>
     {Array.from({ length: 6 }, (_, index) => index).map((index) => (
       <div key={index} className="flex items-center gap-4 px-3 py-3">
@@ -154,7 +158,10 @@ export const ResponsesTable = ({
 
   /** La fila entera abre la respuesta; el enlace de la fecha es el que se
    *  alcanza con el teclado y el que se abre en otra pestaña. */
-  const openRow = (event: MouseEvent<HTMLTableRowElement>, row: ResponseRow) => {
+  const openRow = (
+    event: MouseEvent<HTMLTableRowElement>,
+    row: ResponseRow,
+  ) => {
     if ((event.target as HTMLElement).closest("a, button")) return;
     router.push(hrefOf(row));
   };
@@ -241,7 +248,9 @@ export const ResponsesTable = ({
                     <TableHead className={cn(HEAD_CLASS, "w-44")}>
                       Fecha
                     </TableHead>
-                    <TableHead className={HEAD_CLASS}>Diligenciada por</TableHead>
+                    <TableHead className={HEAD_CLASS}>
+                      Diligenciada por
+                    </TableHead>
                     {columns.map((column) => (
                       <TableHead
                         key={column.fieldId}

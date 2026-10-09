@@ -276,9 +276,9 @@ describe("el almacenamiento", () => {
 
   it("guarda y recupera", () => {
     const { storage } = memoryStorage();
-    expect(writeDraft(storage, SCOPE, SECTIONS, { placa: "SLP-835" }, now)).toBe(
-      true,
-    );
+    expect(
+      writeDraft(storage, SCOPE, SECTIONS, { placa: "SLP-835" }, now),
+    ).toBe(true);
     expect(readDraft(storage, SCOPE, now)?.values).toEqual({
       placa: "SLP-835",
     });

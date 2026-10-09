@@ -20,7 +20,11 @@ interface DraftBannerProps {
  * discreta, porque lo normal es seguir donde se dejó. Dice de cuándo es y, si
  * había fotos o firmas, que ésas no se guardaron.
  */
-export const DraftBanner = ({ draft, disabled, onDiscard }: DraftBannerProps) => {
+export const DraftBanner = ({
+  draft,
+  disabled,
+  onDiscard,
+}: DraftBannerProps) => {
   const [ConfirmDialog, confirm] = useConfirm({
     title: "Empezar de cero",
     message:

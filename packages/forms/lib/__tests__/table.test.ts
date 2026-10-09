@@ -88,7 +88,11 @@ describe("añadir y quitar filas", () => {
   });
 
   it("no añade por encima del máximo", () => {
-    const full = ensureRows(undefined, config({ minRows: 2, maxRows: 2 }), true);
+    const full = ensureRows(
+      undefined,
+      config({ minRows: 2, maxRows: 2 }),
+      true,
+    );
     expect(canAddRow(full, config({ maxRows: 2 }))).toBe(false);
     expect(addRow(full, config({ maxRows: 2 }))).toHaveLength(2);
   });

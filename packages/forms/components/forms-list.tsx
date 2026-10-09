@@ -3,6 +3,7 @@
 import { CollectionEmpty } from "@/components/harmony/collection";
 import { SearchableSelect } from "@/components/harmony/searchable-select";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
@@ -14,12 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useConfirm } from "@/hooks/use-confirm";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -41,10 +37,11 @@ import {
   useRemoveForm,
   useUnarchiveForm,
 } from "../api";
-import { ENTITY_ICONS } from "../lib/field-catalog";
+import { ENTITY_ICONS, FORM_ACTION_ICONS } from "../lib/field-catalog";
 import {
   type FormRowActionKey,
   type FormViewerKeys,
+  canFillNow,
   countForms,
   formRowActions,
   primaryRowAction,
@@ -102,7 +99,11 @@ const StatusBadges = ({ form }: { form: FormRow }) => {
 
 /** El esqueleto tiene la silueta de las filas que sustituye (`03 §2.4`). */
 const ListLoading = () => (
-  <div aria-busy="true" aria-live="polite" className="divide-y divide-border/60">
+  <div
+    aria-busy="true"
+    aria-live="polite"
+    className="divide-y divide-border/60"
+  >
     <span className="sr-only">Cargando…</span>
     {Array.from({ length: 6 }, (_, index) => index).map((index) => (
       <div key={index} className="flex items-center gap-4 px-3 py-3">
@@ -190,6 +191,8 @@ export const FormsList = () => {
         return formRoutes.newEntry(projectId, form._id);
       case "responses":
         return formRoutes.responses(projectId, form._id);
+      case "results":
+        return formRoutes.results(projectId, form._id);
       case "edit":
         return formRoutes.edit(projectId, form._id);
     }
@@ -290,6 +293,24 @@ export const FormsList = () => {
       <div className={className}>{children}</div>
     );
   };
+
+  /** Diligenciar, a la vista en la fila de quien al pulsarla abre el formato:
+   *  no tiene que entrar para empezar una respuesta. */
+  const fillOf = (form: FormRow, compact: boolean) =>
+    canFillNow(form) && primaryRowAction(form, keys) !== "fill" ? (
+      <Button size={compact ? "iconSm" : "sm"} variant="outline" asChild>
+        {/* Un enlace no se deshabilita con `disabled`: se apaga a mano. */}
+        <Link
+          href={formRoutes.fill(projectId, form._id)}
+          aria-label={`Diligenciar ${form.name}`}
+          aria-disabled={isBusy}
+          className="aria-disabled:pointer-events-none aria-disabled:opacity-50"
+        >
+          <FORM_ACTION_ICONS.fill />
+          {compact ? null : "Diligenciar"}
+        </Link>
+      </Button>
+    ) : null;
 
   const menuOf = (form: FormRow) => (
     <FormRowMenu
@@ -430,7 +451,12 @@ export const FormsList = () => {
                     <TableHead className={cn(HEAD_CLASS, "w-28 text-right")}>
                       {kind === "record" ? "Respuestas" : "Elementos"}
                     </TableHead>
-                    <TableHead className={cn(HEAD_CLASS, "w-14")}>
+                    <TableHead
+                      className={cn(
+                        HEAD_CLASS,
+                        kind === "record" ? "w-44" : "w-14",
+                      )}
+                    >
                       <span className="sr-only">Acciones</span>
                     </TableHead>
                   </TableRow>
@@ -480,8 +506,11 @@ export const FormsList = () => {
                           formatCount(form.responseCount)
                         )}
                       </TableCell>
-                      <TableCell className="px-3 text-right">
-                        {menuOf(form)}
+                      <TableCell className="px-3">
+                        <div className="flex items-center justify-end gap-1">
+                          {fillOf(form, false)}
+                          {menuOf(form)}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -503,8 +532,7 @@ export const FormsList = () => {
                       <span
                         className={cn(
                           "line-clamp-2 text-sm font-medium",
-                          form.status === "archived" &&
-                            "text-muted-foreground",
+                          form.status === "archived" && "text-muted-foreground",
                         )}
                       >
                         {form.name}
@@ -519,6 +547,7 @@ export const FormsList = () => {
                       <StatusBadges form={form} />
                     </>,
                   )}
+                  {fillOf(form, true)}
                   {menuOf(form)}
                 </li>
               ))}

@@ -171,6 +171,7 @@ pesadas.
 | **Separadores internos** | `<Separator className="opacity-40" />` |
 | **Separadores entre filas** | `divide-y divide-border/60`, nunca un borde por fila |
 | **Contenedor de icono** | `size-10 rounded-xl border` + par tonal (§1.4) |
+| **Cabecera de `PanelCard`** | La tarjeta de un panel es densa: icono en `size-9` con glifo `size-4`, y título `text-sm font-medium tracking-tight`. Es lo que pinta `components/harmony/panel-card.tsx`; no se escribe a mano. |
 
 **Cuándo una caja se gana su sitio.** Se encajona lo **finito** —los cuatro
 métodos de notificación, los estados de un flujo— y se deja a sangre lo que
@@ -277,6 +278,7 @@ y respuestas, `packages/forms/lib/checklist-styles.ts` para la lista de chequeo.
 | Respuesta anulada | `formResponses.status === "voided"` | red | «Anulada», la fila atenuada y el motivo a la vista |
 | Elemento inactivo | `formResponses.active === false` | gray | «Inactivo» |
 | Ítem conforme · no conforme · no aplica | `ChecklistOption.meaning` | green · red · gray | Siempre con la letra o el nombre de la opción |
+| Fecha vencida o que vence hoy · por vencer · vigente | Los días que faltan para una fecha de un elemento, en un resultado de vencimientos (`ExpirationRow.daysLeft`: negativo o cero · hasta 30 · más) | red · yellow · green | «Venció hace 3 días», «Vence hoy», «Vence en 12 días», «Vigente» (`packages/forms/components/result-tables.tsx`) |
 
 Los estados van en `Badge variant="outline"` con el tinte de su familia
 (`border-<color>-500/20 bg-<color>-500/10 text-<color>-700 dark:text-<color>-400`).
@@ -365,6 +367,7 @@ Cinco variantes de contenido, y sólo cinco:
 | **Lectura** | `flex-1 overflow-y-auto mx-auto w-full max-w-3xl space-y-10 px-6 pt-8 pb-16` | Una pantalla que se lee, no que se rastrea: cada área de ajustes (§1.2, nota). `SettingsArea` la monta; una página no la escribe a mano. |
 | **Editor** | `flex flex-col flex-1 min-h-0 h-1 p-0 lg:h-[calc(100svh-4rem)] lg:flex-none` | Un editor cuyos paneles dibujan sus propios bordes y padding: el constructor de formatos. Es la compuesta a sangre, con el alto de la ventana en escritorio: sin él, una columna larga desplaza el documento entero. |
 | **Documento** | `flex-1 overflow-x-clip mx-auto w-full max-w-5xl space-y-6 px-4 pt-4 pb-24 sm:px-6 sm:pt-6` | Un formato para diligenciar, o una respuesta para leer. Nace en el teléfono (§6.2): 16px de margen y sitio abajo para la barra de envío. Se desplaza la ventana, no la sección: los títulos de bloque de una lista de chequeo son `sticky`. |
+
 
 > [!NOTE]
 > **Una variante con nombre la vigila la prueba; una anulación suelta no la
@@ -735,6 +738,7 @@ Tamaños: `size-4` en botones y filas densas, `size-5` dentro de contenedores
 | Respuesta | `ClipboardPen` |
 | Elemento de un listado | `Box` |
 | Categoría de formatos | `Tag` |
+| Tablero | `LayoutDashboard` |
 
 > **Por qué `HardHat` y no `Building2`**: el casco nombra la obra, que es lo que
 > un proyecto es aquí; el edificio nombra el resultado o la empresa. `Building2`
@@ -762,7 +766,12 @@ seleccionar todo, y «Todo conforme» en un bloque de una lista de chequeo ·
 ### 5.4 Navegación, estado y chrome
 
 - **Navegación**: `House` (inicio del proyecto), `ChevronRight`/`Left`/`Down`/`Up`,
-  `ArrowRight`/`Left`/`Up`/`Down`, `ChevronsUpDown`, `Menu`.
+  `ArrowRight`/`Left`/`Up`/`Down`, `ChevronsUpDown`, `Menu`,
+  `ArrowUpRight` (abrir algo en su pantalla de origen: un resultado del
+  tablero en su formato; y, con `ArrowDownRight` y `Minus`, cuánto subió,
+  bajó o se quedó igual una cifra frente al periodo anterior),
+  `PencilRuler` (la pestaña «Diseño» de un formato: `Pencil` es editar un
+  dato).
 - **Estado**: `Loader2` (carga), `OctagonAlert` (error), `TriangleAlert`
   (advertencia), `Info`, `Check`, `CheckCircle2`, `XCircle`, `ShieldAlert`,
   `KeyRound`, `Lock`.
@@ -794,7 +803,29 @@ operación entre campos · `Timer` días hasta una fecha · `TimerReset` días d
 una fecha · `Cake` años desde una fecha · `CalendarPlus` fecha más un plazo ·
 `Tally5` conteo de marcadas · `Combine` texto compuesto · `Variable` fórmula.
 
-### 5.6 Añadir un icono al catálogo
+### 5.6 Tipos de resultado
+
+Los nueve tipos de `convex/lib/result_types.ts`, con el glifo de
+`packages/forms/lib/result-catalog.ts`, que es el único módulo donde viven. Es
+la cabecera de la tarjeta de un resultado (`PanelCard`), en la pantalla del
+formato y en el tablero:
+
+`Gauge` indicador · `ChartLine` tendencia · `ChartColumn` distribución ·
+`Table2` tabla · `ClipboardCheck` cumplimiento · `TriangleAlert` hallazgos
+frecuentes · `Grid3x3` mapa de calor · `CalendarClock` vencimientos ·
+`Calculator` cifra compuesta.
+
+La meta de una cifra se dice con los glifos de estado de §5.4:
+`CheckCircle2` cumple y `XCircle` no cumple, siempre con su texto.
+
+`ChartLine` es además la entrada «Resultados» de un formato y su estado vacío.
+
+> Dos de estos glifos ya tenían dueño: `ClipboardCheck` es la lista de chequeo
+> (§5.5), de la que sale el cumplimiento, y `TriangleAlert` es el estado de
+> advertencia (§5.4). Aquí nombran un tipo de resultado, no un campo ni un
+> estado.
+
+### 5.7 Añadir un icono al catálogo
 
 Un icono nuevo se añade a este documento **en el mismo cambio** que lo introduce,
 y sólo después de verificar que la entidad no tiene ya uno asignado. Reutilizar
@@ -868,12 +899,20 @@ sol (`00 §2.3`, `02 §7.1`). De ahí estas reglas, que implementan
 
 - **Se decide a 390px de ancho.** Una columna en teléfono, seis en tableta y
   doce en escritorio (`packages/forms/lib/grid.ts`: pequeño 3, medio 6, grande
-  9, entero 12). La lista de chequeo, la tabla y el texto largo ocupan siempre
-  la fila entera.
-- **En escritorio, las filas se completan.** Los tamaños de los campos
-  seguidos de una sección suman doce; la excepción legítima es la firma, que
-  va a media fila (a ancho completo sería un recuadro de 1.100 px). Lo vigila
-  una prueba de la biblioteca de formatos.
+  9, entero 12). En tableta sólo hay dos anchos: el pequeño va a media fila y
+  los demás a fila entera. La lista de chequeo, la tabla y el texto largo
+  ocupan siempre la fila entera.
+- **Las filas se completan, en escritorio y en tableta.** Los tamaños de los
+  campos seguidos de una sección suman doce, y los pequeños van de dos en dos
+  para que la misma fila cierre en tableta. Un campo condicional va a fila
+  entera: aparece y desaparece sin descuadrar a los demás. **La firma va a fila
+  entera**, y un campo de firma nuevo nace así: a media fila dejaba la otra
+  mitad vacía al pie del formato. Lo vigila una prueba de la biblioteca de
+  formatos.
+- **Los controles de una fila arrancan a la misma altura.** Cada campo son dos
+  pistas —la etiqueta con su ayuda, y el control— que comparte con sus vecinos
+  (`FIELD_CELL`, `subgrid`): una ayuda o una etiqueta en dos líneas no empuja
+  su control por debajo del de al lado.
 - **Controles de 40px en teléfono** (`h-10`) y 36px desde `sm`. Los campos de
   texto van a 16px en teléfono: por debajo, iOS amplía la página al enfocar.
 - **Etiqueta encima**, ayuda debajo de la etiqueta, asterisco de obligatorio en

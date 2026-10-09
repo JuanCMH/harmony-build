@@ -116,9 +116,7 @@ export const EntryHistory = ({ entryId, seesAll }: EntryHistoryProps) => {
                       {/* Otro listado que lo relaciona: la fila es un
                           elemento, y se dice cuál. */}
                       {row.title ? `${row.title} · ` : null}
-                      <span className="tabular-nums">
-                        {dateText(row.date)}
-                      </span>{" "}
+                      <span className="tabular-nums">{dateText(row.date)}</span>{" "}
                       · {row.author.name}
                     </p>
                   </div>

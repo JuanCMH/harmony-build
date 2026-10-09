@@ -8,6 +8,8 @@ export const formRoutes = {
     `/projects/${projectId}/formats/${formId}`,
   edit: (projectId: string, formId: string) =>
     `/projects/${projectId}/formats/${formId}/edit`,
+  results: (projectId: string, formId: string) =>
+    `/projects/${projectId}/formats/${formId}/results`,
   fill: (projectId: string, formId: string) =>
     `/projects/${projectId}/formats/${formId}/fill`,
   newEntry: (projectId: string, formId: string) =>

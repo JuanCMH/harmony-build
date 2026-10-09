@@ -129,6 +129,10 @@ export const TableFieldControl = ({
                       "px-2 py-2 text-left text-ui font-normal text-muted-foreground",
                       column.type === "signature" && "min-w-64",
                       column.type === "reference" && "min-w-56",
+                      // El nombre del archivo y su botón, en una línea.
+                      // Ancho fijo: un nombre de archivo largo se recorta
+                      // en vez de quitarle el sitio a las demás columnas.
+                      column.type === "image" && "w-72 min-w-64",
                       // Un texto de 90px se lee «Botas de se»: el detalle es
                       // lo que más se escribe en una fila.
                       column.type === "text" && "min-w-40",

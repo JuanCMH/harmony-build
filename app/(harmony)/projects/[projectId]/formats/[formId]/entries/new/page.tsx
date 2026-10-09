@@ -60,7 +60,12 @@ export default function NewEntryPage() {
         { label: project.name, href: `/projects/${projectId}` },
         { label: "Listados", href: formRoutes.list(projectId, "catalog") },
         ...(form
-          ? [{ label: form.name, href: formRoutes.responses(projectId, formId) }]
+          ? [
+              {
+                label: form.name,
+                href: formRoutes.responses(projectId, formId),
+              },
+            ]
           : []),
         { label: "Elemento nuevo" },
       ]

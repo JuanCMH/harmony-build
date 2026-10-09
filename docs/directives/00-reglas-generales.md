@@ -70,17 +70,18 @@ camillas y kits de derrames, informes de seguridad y salud en el trabajo. Hoy
 viven en una hoja que alguien transcribe —o pierde— a fin de mes.
 
 Harmony Build los digitaliza: el formato se diseña una vez, se diligencia en la
-obra, y sus respuestas quedan guardadas, listables y, más adelante, graficadas.
+obra, y sus respuestas quedan guardadas, listables y graficadas.
 La promesa central es **que el dato de la obra exista en el momento en que
 ocurre, con nombre, fecha y responsable**, y no en una hoja que se reconstruye
 después.
 
 > [!NOTE]
-> **Fase actual: base.** Hoy existen autenticación, proyectos, miembros, roles
-> y auditoría. El módulo de formatos está en diseño (`docs/plans/`) y las
-> gráficas del panel son una fase posterior. Estas directrices describen lo que
-> existe; lo que depende del módulo de formatos queda marcado como pendiente de
-> su plan, sin contenido inventado.
+> **Fase actual: formatos y resultados.** Hoy existen autenticación, proyectos,
+> miembros, roles, auditoría, el módulo de formatos y los resultados con su
+> tablero; cada uno tiene su plan en `docs/plans/`. La exportación a Excel y
+> PDF es una fase posterior. Estas directrices describen lo que existe; lo que
+> depende de un plan que no está aprobado queda marcado como pendiente, sin
+> contenido inventado.
 
 ### 2.1 Atributos de la plataforma
 
@@ -175,9 +176,13 @@ Project (la obra o el proyecto de la empresa)
  ├── Forms             → formatos (`record`: lo que la obra hace) y listados
  │    │                   (`catalog`: lo que la obra tiene)
  │    ├── FormVersions  → borrador (número 0) y versiones publicadas inmutables
- │    └── FormResponses → respuestas de un formato y elementos de un listado
- │         └── FormResponseLinks → a qué elemento de un listado apunta cada
- │                                  relación respondida
+ │    ├── FormResponses → respuestas de un formato y elementos de un listado
+ │    │    └── FormResponseLinks → a qué elemento de un listado apunta cada
+ │    │                             relación respondida
+ │    └── FormResults   → lo que se calcula de las respuestas de un formato:
+ │                         una definición, sin datos
+ ├── Dashboards        → el tablero del proyecto: pestañas que enseñan
+ │                        resultados
  └── Logs              → auditoría
 ```
 
@@ -191,6 +196,8 @@ Project (la obra o el proyecto de la empresa)
 | `formVersions` | Las secciones de un formato: su borrador y cada versión publicada. | Una versión publicada no se modifica nunca (`docs/plans/2026-09-28-modulo-de-formatos-design.md §2`). |
 | `formResponses` | Una respuesta —o un elemento de listado— con sus valores anidados y tipados. | Guarda con qué versión se contestó. Una respuesta no se edita: se anula. Un elemento se edita y se inactiva. |
 | `formResponseLinks` | Una fila por elemento distinto que una respuesta relaciona. | Es lo que se consulta al revés: el historial de un vehículo. |
+| `formResults` | Un resultado de un formato: su nombre y la definición de un cálculo: uno de nueve tipos, con sus piezas (fórmula, condiciones, meta, comparación, series). | **No guarda datos**: se calcula al leer, sobre las respuestas vigentes del rango de fechas que se mire (`docs/plans/2026-10-09-resultados-y-tablero-design.md`). |
+| `dashboards` | El tablero del proyecto: uno, con sus pestañas y los resultados que enseña cada una. | Apunta a los resultados por id, no los copia. |
 | `logs` | Auditoría. | Ver `01 §5.5`. |
 | `users` | Identidad (tablas de `@convex-dev/auth`). | No es dominio: una persona existe fuera de cualquier proyecto. |
 
@@ -198,9 +205,10 @@ Ciclo cubierto: registro e inicio de sesión · creación de proyectos con
 identidad visual · unión por código con rol por defecto · gestión de miembros ·
 roles y permisos granulares · auditoría · formatos y listados con constructor,
 versiones, 18 tipos de campo, relaciones entre formatos, diligenciamiento desde
-el teléfono y consulta de respuestas · biblioteca de formatos SST
-(`convex/sst_library/`, instalada con `formLibrary.installSst`) · web
-responsive instalable como PWA.
+el teléfono y consulta de respuestas · resultados por formato y tablero del
+proyecto, por rango de fechas · biblioteca de formatos SST
+(`convex/sst_library/`, instalada con `formLibrary.installSst`, con sus
+resultados y su tablero) · web responsive instalable como PWA.
 
 > [!NOTE]
 > El detalle exacto de entidades, campos, índices y estados es responsabilidad de
@@ -223,6 +231,7 @@ responsive instalable como PWA.
 | Toasts | **sonner** | Único sistema de notificaciones. |
 | Fechas | **date-fns** | Formatos compartidos en `lib/date-formats.ts`, locale `es`. |
 | Animación | **motion** | Ver §5.1. |
+| Gráficas | **Recharts** (`3.8.0`, fijada) | Con el contenedor de `components/ui/chart.tsx`. Ver §5.1. |
 | Iconos | **lucide-react** | Única librería de iconos. Ver `03 §5`. |
 | Móvil | **Web responsive + PWA** (service worker) | Único alcance móvil del proyecto. Ver `02 §7`. |
 | Correo | **Resend** | Sólo desde Convex (`convex/resend.ts`): el código de restablecimiento. |
@@ -232,8 +241,8 @@ responsive instalable como PWA.
 | Gestor de paquetes | **Bun** | `bun install`, `bun dev`, `bun run …`. |
 
 Lo que este stack **todavía no tiene**, y entrará con su primer consumidor:
-gráficas, exportación a Excel y PDF, arrastrar y soltar, migraciones. La
-librería que cubrirá cada propósito ya está decidida en §5.1.
+exportación a Excel y PDF, migraciones. La librería que cubrirá cada propósito
+ya está decidida en §5.1.
 
 ---
 
@@ -264,6 +273,7 @@ librería que cubrirá cada propósito ya está decidida en §5.1.
 | **Listas con buscador** | `cmdk` vía `components/ui/command.tsx` | — | Lo consumen `SearchableSelect` y `SearchableMultiSelect`. |
 | **Tema claro/oscuro** | `next-themes` vía `components/providers/theme-provider.tsx` | — | — |
 | **Arrastrar y soltar** | `@dnd-kit/core` + `@dnd-kit/sortable` + `@dnd-kit/utilities` | cualquier otra | El constructor de formatos: la paleta, el lienzo y el orden de los campos. |
+| **Gráficas** | `recharts` (`3.8.0`, fijada sin `^`) vía `components/ui/chart.tsx` | cualquier otra | Los resultados de los formatos y el tablero: la tendencia y el cumplimiento (`packages/forms/components/result-charts.tsx`). Lo que es una barra, una tabla o un mapa de calor se pinta con HTML, sin librería. |
 | **Códigos aleatorios** | `oslo/crypto` | `Math.random()` para cualquier credencial | Código de unión y código de restablecimiento. Declarada explícitamente en `package.json`, aunque `@convex-dev/auth` también la trae. |
 | **Observabilidad / errores** | `posthog-js` vía `components/providers/observability-provider.tsx` | Sentry, Datadog, un segundo SDK «por comparar»; `console.error` suelto en código de aplicación | Todo error del cliente pasa por `logError` (`lib/logging.ts`), que es el único punto que reenvía a PostHog. Grabación de sesión y autocaptura se apagan **en el código**, no en el dashboard. Sin `NEXT_PUBLIC_POSTHOG_KEY` el provider no hace nada. |
 
@@ -273,7 +283,6 @@ tabla de arriba en el mismo cambio:
 
 | Propósito | Será la canónica | Entra con |
 |---|---|---|
-| **Gráficas** | `recharts` — *no instalada todavía* | La fase de gráficas del panel. |
 | **Escribir/exportar Excel** | `exceljs` — *no instalada todavía* | La primera exportación de respuestas. |
 | **Generar PDF** | `pdfmake` — *no instalada todavía* | La primera exportación a PDF. |
 | **Migraciones de datos** | `@convex-dev/migrations` — *no instalada todavía* | La primera migración sobre datos vivos (`01 §7.2`). |
@@ -294,6 +303,13 @@ tabla de arriba en el mismo cambio:
   sustituye se desinstala en el mismo cambio que la sustituye, aunque parezca
   cómodo dejarla «por si volvemos».
 - Preferir **imports directos** sobre barrels (mejor tree-shaking). Ver `02 §1`.
+- **Los paquetes de `@radix-ui/react-*` que se superponen van a la misma
+  versión, fijada sin `^`.** `react-dialog` y `react-popover` traen cada uno su
+  gestor de foco; con versiones distintas se instalan dos, y un selector con
+  buscador abierto dentro de un sheet pierde el foco: lo que se teclea cae en
+  otro campo del formulario. Se comprueba con
+  `find node_modules -path "*react-focus-scope/package.json"`: tiene que salir
+  uno solo.
 
 ### 5.3 Duplicaciones vivas (deuda conocida)
 

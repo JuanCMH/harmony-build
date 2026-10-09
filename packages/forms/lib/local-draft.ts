@@ -168,8 +168,7 @@ const JUST_NOW_MS = 60 * 60 * 1000;
  * mañana», «de ayer», «de hace 3 días».
  */
 export function draftAgeText(savedAt: number, now: number): string {
-  const days =
-    daysBetween(todayInColombia(savedAt), todayInColombia(now)) ?? 0;
+  const days = daysBetween(todayInColombia(savedAt), todayInColombia(now)) ?? 0;
   if (days >= 2) return `de hace ${days} días`;
   if (days === 1) return "de ayer";
 

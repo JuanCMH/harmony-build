@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { FormKind } from "@/convex/lib/form_types";
 import {
+  ChartLine,
   type LucideIcon,
   MoreHorizontal,
   Pencil,
@@ -28,11 +29,15 @@ import {
 /** Las acciones que sólo llevan a otra pantalla: son enlaces, no botones. */
 export type FormRowLinkKey = Extract<
   FormRowActionKey,
-  "fill" | "addEntry" | "responses" | "edit"
+  "fill" | "addEntry" | "responses" | "results" | "edit"
 >;
 
 export const isLinkAction = (key: FormRowActionKey): key is FormRowLinkKey =>
-  key === "fill" || key === "addEntry" || key === "responses" || key === "edit";
+  key === "fill" ||
+  key === "addEntry" ||
+  key === "responses" ||
+  key === "results" ||
+  key === "edit";
 
 const actionIcon = (key: FormRowActionKey, kind: FormKind): LucideIcon => {
   switch (key) {
@@ -42,6 +47,8 @@ const actionIcon = (key: FormRowActionKey, kind: FormKind): LucideIcon => {
       return Plus;
     case "responses":
       return kind === "record" ? ENTITY_ICONS.response : ENTITY_ICONS.entry;
+    case "results":
+      return ChartLine;
     case "edit":
       return Pencil;
     case "duplicate":

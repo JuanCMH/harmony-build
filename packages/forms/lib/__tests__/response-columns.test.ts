@@ -59,7 +59,10 @@ describe("los encabezados del listado", () => {
 
   it("en un listado, el campo de título no se repite como columna", () => {
     const sections = [
-      section("a", 1, [field("placa", "text", true), field("soat", "text", true)]),
+      section("a", 1, [
+        field("placa", "text", true),
+        field("soat", "text", true),
+      ]),
     ];
     expect(
       entryColumns(sections, "placa").map((column) => column.fieldId),
@@ -253,7 +256,9 @@ describe("los trozos de una celda", () => {
   });
 
   it("en rojo va sólo el trozo de los no conformes", () => {
-    expect(cellParts(cell("61 conformes · 2 no conformes · 1 no aplica", true))).toEqual([
+    expect(
+      cellParts(cell("61 conformes · 2 no conformes · 1 no aplica", true)),
+    ).toEqual([
       { text: "61 conformes", isFinding: false },
       { text: "2 no conformes", isFinding: true },
       { text: "1 no aplica", isFinding: false },

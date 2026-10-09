@@ -57,13 +57,15 @@ export const PanelCard = ({
         título, y unas pestañas con buscador pasan a la siguiente sólo cuando
         no caben. */}
       <header className="flex flex-wrap items-center justify-between gap-3 p-4">
-        <div className="flex min-w-0 flex-1 basis-56 items-center gap-3">
+        <div className="flex min-w-0 flex-1 basis-40 items-center gap-3">
           <div className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-h-indigo/10 bg-h-indigo/10 text-h-indigo">
             <Icon className="size-4" />
           </div>
           <div className="min-w-0">
             <h2
               id={tituloId}
+              // Un título que no cabe se corta: entero, al pasar por él.
+              title={title}
               className="truncate text-sm font-medium tracking-tight"
             >
               {title}
@@ -76,7 +78,7 @@ export const PanelCard = ({
           </div>
         </div>
         {actions ? (
-          <div className="flex min-w-0 flex-wrap items-center gap-2 sm:justify-end">
+          <div className="ml-auto flex min-w-0 flex-wrap items-center gap-2 sm:justify-end">
             {actions}
           </div>
         ) : null}

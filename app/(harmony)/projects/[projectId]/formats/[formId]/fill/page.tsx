@@ -55,9 +55,7 @@ export default function FillFormPage() {
 
   const draftScope = useMemo(
     () =>
-      version
-        ? { projectId, formId, versionNumber: version.number }
-        : null,
+      version ? { projectId, formId, versionNumber: version.number } : null,
     [projectId, formId, version],
   );
 

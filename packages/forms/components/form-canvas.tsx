@@ -25,7 +25,12 @@ import {
   type CatalogNames,
   describeTypeConfig,
 } from "../lib/field-config-text";
-import { FIELD_GRID, FIELD_SIZE_SPAN } from "../lib/grid";
+import {
+  FIELD_CELL,
+  FIELD_CELL_LABEL,
+  FIELD_GRID,
+  FIELD_SIZE_SPAN,
+} from "../lib/grid";
 import { FormFieldInput } from "./form-field";
 
 /** El campo del lienzo no se rellena: su `onChange` no lleva a ninguna parte. */
@@ -43,6 +48,10 @@ export interface CanvasDragData {
 
 const DuplicateIcon = FORM_ACTION_ICONS.duplicate;
 
+/** El sitio que la etiqueta deja a las marcas de comportamiento, según
+ *  cuántas lleve el campo (de ninguna a tres). */
+const MARKS_PADDING = ["", "pr-6", "pr-10", "pr-14"] as const;
+
 /**
  * El campo como se verá, con lo que una lista de chequeo larga no puede
  * enseñar entera: sus primeros ítems por bloque y «… y 58 más».
@@ -50,9 +59,13 @@ const DuplicateIcon = FORM_ACTION_ICONS.duplicate;
 const FieldPreview = ({
   field,
   catalogNames,
+  markCount,
 }: {
   field: FormField;
   catalogNames: CatalogNames;
+  /** Cuántas marcas de comportamiento lleva encima, a la derecha: la
+   *  etiqueta les deja sitio, y sólo el que hace falta. */
+  markCount: number;
 }) => {
   const preview =
     field.type === "checklist" && field.config.checklist
@@ -65,8 +78,17 @@ const FieldPreview = ({
   const TypeIcon = FIELD_CATALOG[field.type].icon;
 
   return (
-    <div className="space-y-2">
-      <div className="space-y-1 pr-16">
+    // Dos hijos, las dos pistas de `FIELD_CELL`: la etiqueta con su ayuda, y
+    // el control con lo que cuelga de él. Así los controles de una fila del
+    // lienzo arrancan a la misma altura, como en el formulario.
+    <>
+      <div
+        className={cn(
+          FIELD_CELL_LABEL,
+          "space-y-1",
+          MARKS_PADDING[Math.min(markCount, MARKS_PADDING.length - 1)],
+        )}
+      >
         <p className="text-sm font-medium">
           {field.label || (
             <span className="text-muted-foreground">Sin etiqueta</span>
@@ -84,32 +106,34 @@ const FieldPreview = ({
           <p className="text-xs text-muted-foreground">{field.description}</p>
         ) : null}
       </div>
-      {/* El mismo control que rellena quien diligencia, apagado: el lienzo
-          deja de ser una lista de nombres y pasa a ser el formato. `inert`: ni
-          se pulsa ni se anuncia, porque aquí es una muestra. */}
-      <div inert className="pointer-events-none">
-        <FormFieldInput
-          id={`canvas-${field.id}`}
-          field={shown}
-          value={undefined}
-          disabled
-          showMissing={false}
-          context={CANVAS_CONTEXT}
-          onChange={IGNORE}
-        />
+      <div className="min-w-0 space-y-2">
+        {/* El mismo control que rellena quien diligencia, apagado: el lienzo
+            deja de ser una lista de nombres y pasa a ser el formato. `inert`:
+            ni se pulsa ni se anuncia, porque aquí es una muestra. */}
+        <div inert className="pointer-events-none">
+          <FormFieldInput
+            id={`canvas-${field.id}`}
+            field={shown}
+            value={undefined}
+            disabled
+            showMissing={false}
+            context={CANVAS_CONTEXT}
+            onChange={IGNORE}
+          />
+        </div>
+        {preview && preview.hidden > 0 ? (
+          <p className="text-ui text-muted-foreground">
+            … y {preview.hidden} más
+          </p>
+        ) : null}
+        {summary && field.type !== "checklist" ? (
+          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <TypeIcon className="size-3.5 shrink-0" aria-hidden />
+            {summary}
+          </p>
+        ) : null}
       </div>
-      {preview && preview.hidden > 0 ? (
-        <p className="text-ui text-muted-foreground">
-          … y {preview.hidden} más
-        </p>
-      ) : null}
-      {summary && field.type !== "checklist" ? (
-        <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <TypeIcon className="size-3.5 shrink-0" aria-hidden />
-          {summary}
-        </p>
-      ) : null}
-    </div>
+    </>
   );
 };
 
@@ -160,7 +184,8 @@ const CanvasField = ({
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={cn(
-        "group relative min-w-0",
+        "group relative",
+        FIELD_CELL,
         spanClassName,
         isDragging && "z-10 opacity-40",
       )}
@@ -181,13 +206,18 @@ const CanvasField = ({
         aria-label={`Configurar ${name}`}
         aria-pressed={isSelected}
         className={cn(
-          "h-full w-full cursor-pointer rounded-lg p-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+          FIELD_CELL,
+          "w-full cursor-pointer rounded-lg p-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
           isSelected
             ? "bg-h-indigo/5 ring-2 ring-h-indigo/40"
             : "hover:bg-accent/40",
         )}
       >
-        <FieldPreview field={field} catalogNames={catalogNames} />
+        <FieldPreview
+          field={field}
+          catalogNames={catalogNames}
+          markCount={marks.length}
+        />
       </div>
 
       {/* Lo que no se ve en el control pero cambia su comportamiento. */}
@@ -311,7 +341,7 @@ export const FormCanvas = ({
         ref={setNodeRef}
         className={cn(
           FIELD_GRID,
-          "items-start rounded-lg transition-colors",
+          "rounded-lg transition-colors",
           isOver && "bg-h-indigo/5 ring-1 ring-h-indigo/30",
         )}
         aria-label="Campos de la sección"

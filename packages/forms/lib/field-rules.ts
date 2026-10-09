@@ -281,7 +281,9 @@ export function describeComputed(
       return `Opciones marcadas de ${nameOf(recipe.of)}`;
     case "concat":
       return recipe.parts
-        .map((part) => (part.type === "field" ? nameOf(part.fieldId) : part.text))
+        .map((part) =>
+          part.type === "field" ? nameOf(part.fieldId) : part.text,
+        )
         .join("");
   }
 }
@@ -324,7 +326,9 @@ export function operandCandidates(
   return controllerCandidates(field, fields).filter(
     (candidate) =>
       OPERAND_TYPES[kind].includes(candidate.type) &&
-      !(candidate.config.computed && isTodayDependent(candidate.config.computed)),
+      !(
+        candidate.config.computed && isTodayDependent(candidate.config.computed)
+      ),
   );
 }
 

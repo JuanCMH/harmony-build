@@ -68,7 +68,10 @@ export const FileValueView = ({
       rel="noopener noreferrer"
       className="inline-flex max-w-full items-center gap-2 rounded-md text-sm underline-offset-4 hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
     >
-      <Paperclip aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+      <Paperclip
+        aria-hidden
+        className="size-4 shrink-0 text-muted-foreground"
+      />
       <span className="min-w-0 break-all">{value.name}</span>
       <Download aria-hidden className="size-4 shrink-0 text-muted-foreground" />
       <span className="sr-only">Descargar</span>

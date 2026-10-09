@@ -291,8 +291,10 @@ type Unbranded<T> = T extends { __tableName: string }
 
 type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : never) : never;
 
-const _sectionMatches: Same<Unbranded<Infer<typeof formSection>>, FormSection> =
-  true;
+const _sectionMatches: Same<
+  Unbranded<Infer<typeof formSection>>,
+  FormSection
+> = true;
 const _valueMatches: Same<
   Unbranded<Infer<typeof storedFieldValue>>,
   StoredFieldValue

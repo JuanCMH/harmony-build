@@ -100,9 +100,7 @@ export const RelatedEntryFilter = ({
             data-placeholder={title === null ? "" : undefined}
             className={cn(SEARCHABLE_TRIGGER_CLASS, "w-full min-w-0 sm:w-56")}
           >
-            <span className="min-w-0 truncate text-left">
-              {title ?? label}
-            </span>
+            <span className="min-w-0 truncate text-left">{title ?? label}</span>
             <ChevronDownIcon className="size-4 shrink-0 opacity-50" />
           </button>
         </PopoverTrigger>

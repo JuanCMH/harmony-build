@@ -17,7 +17,12 @@ interface ListEmptyProps {
  * de un formato que se acaba de publicar no se resuelve leyendo, se resuelve
  * diligenciando, y el botón tiene que estar donde se mira.
  */
-export const ListEmpty = ({ icon: Icon, title, hint, action }: ListEmptyProps) => (
+export const ListEmpty = ({
+  icon: Icon,
+  title,
+  hint,
+  action,
+}: ListEmptyProps) => (
   <div className="flex flex-col items-center justify-center px-8 py-10 text-center">
     <div className="mb-3 flex size-10 items-center justify-center rounded-xl bg-muted text-muted-foreground">
       <Icon className="size-5" />

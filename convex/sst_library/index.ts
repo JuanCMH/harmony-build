@@ -10,11 +10,11 @@ import { SST_F_007 } from "./forms/sst_f_007";
 import { SST_F_010 } from "./forms/sst_f_010";
 import { SST_F_031 } from "./forms/sst_f_031";
 import { SST_F_038 } from "./forms/sst_f_038";
-import { SST_F_046_A1 } from "./forms/sst_f_046_a1";
-import { SST_F_046_A2 } from "./forms/sst_f_046_a2";
-import { SST_F_046_A3 } from "./forms/sst_f_046_a3";
-import { SST_F_046_A4 } from "./forms/sst_f_046_a4";
-import { SST_F_046_A6 } from "./forms/sst_f_046_a6";
+import { HORAS_HOMBRE_TRABAJADAS } from "./forms/horas_hombre_trabajadas";
+import { CONTROL_DE_AUSENTISMO } from "./forms/control_de_ausentismo";
+import { CAPACITACIONES_Y_CHARLAS } from "./forms/capacitaciones_y_charlas";
+import { GESTION_AMBIENTAL } from "./forms/gestion_ambiental";
+import { REGISTRO_FOTOGRAFICO } from "./forms/registro_fotografico";
 import { SST_F_065 } from "./forms/sst_f_065";
 import { SST_F_066 } from "./forms/sst_f_066";
 import { SST_F_074 } from "./forms/sst_f_074";
@@ -46,10 +46,10 @@ export const SST_LIBRARY: LibraryForm[] = [
   SST_F_074,
   // Dotación
   SST_F_007,
-  // Informe de gestión
-  SST_F_046_A1,
-  SST_F_046_A2,
-  SST_F_046_A3,
-  SST_F_046_A4,
-  SST_F_046_A6,
+  // Gestión SST: lo que en el papel eran las hojas del informe `SST-F-046`
+  HORAS_HOMBRE_TRABAJADAS,
+  CONTROL_DE_AUSENTISMO,
+  CAPACITACIONES_Y_CHARLAS,
+  GESTION_AMBIENTAL,
+  REGISTRO_FOTOGRAFICO,
 ];

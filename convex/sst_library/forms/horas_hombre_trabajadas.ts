@@ -1,4 +1,7 @@
-/** SST-F-046 · Anexo 1 · Horas hombre trabajadas.
+/** Horas hombre trabajadas.
+ *
+ *  En el papel es una hoja del informe de gestión SST (`SST-F-046`); aquí es
+ *  un formato con nombre propio, que se diligencia por separado.
  *
  *  Un registro por día. Las HHT se calculan como en la hoja:
  *  personas × horas × días + tiempo extra.
@@ -16,14 +19,13 @@ import {
 import { CATEGORY, workCenter } from "../common";
 import type { LibraryForm } from "../types";
 
-export const SST_F_046_A1: LibraryForm = {
-  key: "sst-f-046-a1",
+export const HORAS_HOMBRE_TRABAJADAS: LibraryForm = {
+  key: "horas-hombre-trabajadas",
   kind: "record",
-  name: "Anexo 1 · Horas hombre trabajadas",
-  code: "SST-F-046-A1",
-  category: CATEGORY.report,
+  name: "Horas hombre trabajadas",
+  category: CATEGORY.management,
   description:
-    "El registro diario de personas y horas trabajadas, del que salen las horas hombre trabajadas (HHT) del informe de gestión.",
+    "El registro diario de personas y horas trabajadas, del que salen las horas hombre trabajadas (HHT).",
   sections: sections(
     section("horas", "Horas hombre trabajadas", [
       workCenter(),

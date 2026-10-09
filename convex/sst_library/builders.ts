@@ -221,7 +221,9 @@ export const signature = (
   signer: SignatureConfig["signer"],
   extras: FieldExtras = {},
 ): FormField =>
-  field("signature", label, "medium", extras, { signature: { signer } });
+  // A fila entera: es lo último del formato y el recuadro donde se firma con
+  // el dedo agradece el ancho. A media fila dejaba la otra mitad vacía.
+  field("signature", label, "full", extras, { signature: { signer } });
 
 /** El campo sólo se pide cuando `fieldId` vale `value`. */
 export const onlyWhen = (fieldId: string, value: string): FieldVisibility => ({

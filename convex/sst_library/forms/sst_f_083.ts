@@ -54,17 +54,15 @@ export const SST_F_083: LibraryForm = {
   description:
     "La inspección del compresor antes de encenderlo: una por equipo y por día.",
   sections: sections(
-    section("identificacion", "Equipo y lugar", [
+    section("inspeccion", "Inspección", [
       equipment("Compresor"),
       workCenter(),
-    ]),
-    section("inspeccion", "Inspección", [
       checklist(
         "Estado del compresor",
         { scale: SCALE_BMNA, blocks },
         { id: "inspeccion" },
       ),
+      ...closing("Firma del operador"),
     ]),
-    closing("Firma del operador"),
   ),
 };

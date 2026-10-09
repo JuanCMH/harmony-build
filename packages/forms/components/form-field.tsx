@@ -118,8 +118,7 @@ const FieldControl = ({
   owner,
 }: FormFieldInputProps & { owner: ReferenceOwner }) => {
   const text = typeof value === "string" ? value : "";
-  const isMissing =
-    showMissing && field.required && isEmptyValue(field, value);
+  const isMissing = showMissing && field.required && isEmptyValue(field, value);
 
   // Un derivado no se escribe: se lee lo que vale, y se ve que se calcula.
   if (field.config.computed) {
@@ -165,6 +164,7 @@ const FieldControl = ({
           value={value}
           disabled={disabled}
           invalid={isMissing}
+          inCell={owner.columnId !== undefined}
           onChange={onChange}
         />
       );

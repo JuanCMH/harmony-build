@@ -26,7 +26,7 @@ export const Hint = ({
     <TooltipProvider>
       <Tooltip delayDuration={50}>
         <TooltipTrigger asChild>{children}</TooltipTrigger>
-        <TooltipContent align={align} side={side}>
+        <TooltipContent align={align} side={side} className="max-w-64">
           <p className="font-medium text-xs">{label}</p>
         </TooltipContent>
       </Tooltip>

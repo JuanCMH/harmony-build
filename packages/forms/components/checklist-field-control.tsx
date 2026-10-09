@@ -111,7 +111,8 @@ export const ChecklistFieldControl = ({
           }
           onFill={
             okOption
-              ? () => onChange(fillBlock(config, value, block.id, okOption.value))
+              ? () =>
+                  onChange(fillBlock(config, value, block.id, okOption.value))
               : undefined
           }
           fillLabel={okOption ? `Todo «${okOption.label}»` : ""}
@@ -139,6 +140,11 @@ interface ChecklistBlockRowsProps {
   ) => void;
   onFill?: () => void;
 }
+
+/** 40px en teléfono y 36px desde `sm`, como todo control del formulario
+ *  (`03 §6.2`). Se repite aquí y no se importa de `form-field.tsx` porque ese
+ *  módulo importa éste. */
+const EXTRA_CONTROL_HEIGHT = "h-10 sm:h-9";
 
 const ChecklistBlockRows = ({
   fieldId,
@@ -239,7 +245,8 @@ const ChecklistItemRow = ({
   onAnswer,
 }: ChecklistItemRowProps) => {
   const selected = optionByValue(config, answer?.value);
-  const noteIsRequired = config.note === "onFail" && selected?.meaning === "fail";
+  const noteIsRequired =
+    config.note === "onFail" && selected?.meaning === "fail";
   const noteIsMissing = needsNote(config, answer);
   const isUnanswered = selected === undefined;
 
@@ -324,13 +331,18 @@ const ChecklistItemRow = ({
 
       {hasExtras && (
         <div className="grid grid-cols-2 gap-2 sm:max-w-md">
+          {/* Las dos celdas tienen la misma forma —rótulo en bloque, control
+              debajo, la misma altura—: con el rótulo en línea en una y en
+              bloque en la otra, la cantidad quedaba 4px por debajo de la
+              fecha. */}
           {config.quantity && (
-            <label className="space-y-1">
-              <span className="text-xs text-muted-foreground">
+            <label className="flex min-w-0 flex-col gap-1">
+              <span className="block text-xs text-muted-foreground">
                 {config.quantity.label}
               </span>
               <Input
                 type="number"
+                className={EXTRA_CONTROL_HEIGHT}
                 inputMode="numeric"
                 min={0}
                 value={answer?.quantity ?? ""}
@@ -347,12 +359,12 @@ const ChecklistItemRow = ({
             </label>
           )}
           {config.date && (
-            <div className="space-y-1">
+            <div className="flex min-w-0 flex-col gap-1">
               <span className="block text-xs text-muted-foreground">
                 {config.date.label}
               </span>
               <DatePicker
-                className="w-full"
+                className={cn("w-full", EXTRA_CONTROL_HEIGHT)}
                 clearable
                 placeholder="Sin fecha"
                 date={toDate(answer?.date)}

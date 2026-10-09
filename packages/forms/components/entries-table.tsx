@@ -68,7 +68,11 @@ const updatedText = (row: EntryRow) =>
   dateText(todayInColombia(row.updatedAt ?? row._creationTime));
 
 const TableLoading = () => (
-  <div aria-busy="true" aria-live="polite" className="divide-y divide-border/60">
+  <div
+    aria-busy="true"
+    aria-live="polite"
+    className="divide-y divide-border/60"
+  >
     <span className="sr-only">Cargando los elementos…</span>
     {Array.from({ length: 6 }, (_, index) => index).map((index) => (
       <div key={index} className="flex items-center gap-4 px-3 py-3">

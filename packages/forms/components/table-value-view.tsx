@@ -22,10 +22,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { ReactNode } from "react";
 
-import {
-  type ValueViewContext,
-  columnAsField,
-} from "../lib/response-reading";
+import { type ValueViewContext, columnAsField } from "../lib/response-reading";
 import { EmptyValue } from "./empty-value";
 import { FileValueView } from "./file-value-view";
 import { ReferenceValueView } from "./reference-value-view";

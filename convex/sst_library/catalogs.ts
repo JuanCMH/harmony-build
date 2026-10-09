@@ -41,6 +41,7 @@ const workCenters: LibraryForm = {
       }),
       text("Ciudad", { showInTable: true, placeholder: "ej: Bogotá" }),
       text("Responsable", {
+        size: "full",
         showInTable: true,
         description: "Quien responde por el centro de trabajo",
         placeholder: "ej: Laura Pérez Gómez",
@@ -67,16 +68,18 @@ const staff: LibraryForm = {
         placeholder: "ej: Carlos Andrés Medina Peña",
       }),
       text("Cédula", {
-        size: "small",
         showInTable: true,
         placeholder: "ej: 1000000001",
       }),
       text("Cargo", {
-        size: "small",
         showInTable: true,
         placeholder: "ej: Conductor",
       }),
-      phone("Celular", { showInTable: true, placeholder: "ej: 3000000001" }),
+      phone("Celular", {
+        size: "medium",
+        showInTable: true,
+        placeholder: "ej: 3000000001",
+      }),
       text("Contacto de emergencia", {
         id: "contacto-emergencia",
         description: "A quién llamar en caso de emergencia",
@@ -84,8 +87,20 @@ const staff: LibraryForm = {
       }),
       phone("Celular del contacto", {
         id: "celular-emergencia",
+        size: "medium",
         placeholder: "ej: 3000000002",
       }),
+      text("Licencia de conducción n.º", {
+        id: "licencia-numero",
+        description: "Sólo para quien conduce",
+        placeholder: "ej: 1000000001",
+      }),
+      select(
+        "Categoría",
+        choices(["A1", "A2", "B1", "B2", "B3", "C1", "C2", "C3"]),
+        { id: "licencia-categoria", size: "small" },
+      ),
+      date("Vigencia de la licencia", { id: "licencia-vigencia" }),
     ]),
     section("salud", "Salud y seguridad social", [
       select(
@@ -106,27 +121,35 @@ const staff: LibraryForm = {
       text("ARL", { size: "small", placeholder: "ej: ARL Sura" }),
       text("AFP", { size: "small", placeholder: "ej: Porvenir" }),
       text("Alergias", {
+        size: "full",
         placeholder: "ej: Penicilina",
         description: "Si no tiene, escribe «Ninguna»",
       }),
+      // Las dos columnas de vacunas del anexo 5 del informe de gestión
+      // (Medevac). El papel marca la dosis del tétanos en cinco columnas.
+      select(
+        "Vacuna contra la fiebre amarilla",
+        choices(["Sí", "No"], "fiebre-amarilla"),
+        {
+          id: "vacuna-fiebre-amarilla",
+        },
+      ),
+      select(
+        "Vacuna contra el tétanos",
+        [
+          choice("Sin vacuna", "tetanos-sin-vacuna"),
+          choice("1.ª dosis", "tetanos-dosis-1"),
+          choice("2.ª dosis", "tetanos-dosis-2"),
+          choice("3.ª dosis", "tetanos-dosis-3"),
+          choice("4.ª dosis (refuerzo)", "tetanos-dosis-4"),
+          choice("5.ª dosis (refuerzo)", "tetanos-dosis-5"),
+        ],
+        {
+          id: "vacuna-tetanos",
+          description: "La última dosis que tiene puesta",
+        },
+      ),
     ]),
-    section(
-      "licencia",
-      "Licencia de conducción",
-      [
-        text("Licencia de conducción n.º", {
-          id: "licencia-numero",
-          placeholder: "ej: 1000000001",
-        }),
-        select(
-          "Categoría",
-          choices(["A1", "A2", "B1", "B2", "B3", "C1", "C2", "C3"]),
-          { id: "licencia-categoria", size: "small" },
-        ),
-        date("Vigencia de la licencia", { id: "licencia-vigencia" }),
-      ],
-      "Sólo para quien conduce.",
-    ),
   ),
   sampleEntries: SAMPLE_ENTRIES.staff,
 };
@@ -166,8 +189,6 @@ const vehicles: LibraryForm = {
         showInTable: true,
         placeholder: "ej: Constructora Ejemplo S.A.S.",
       }),
-    ]),
-    section("documentos", "Documentos", [
       text("SOAT n.º", {
         id: "soat-numero",
         description: "Número de la póliza del seguro obligatorio",
@@ -233,6 +254,9 @@ const equipmentCatalog: LibraryForm = {
       text("Referencia", { showInTable: true, placeholder: "ej: GWS 850" }),
       select("Tipo de pulidora", choices(["Inalámbrica", "Eléctrica"]), {
         id: "tipo-pulidora",
+        // Fila entera: aparece y desaparece, y así nunca deja media fila
+        // vacía ni descuadra a los que van antes.
+        size: "full",
         visibility: onlyWhen("tipo-equipo", "pulidora"),
       }),
     ]),

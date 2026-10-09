@@ -117,11 +117,9 @@ export const SST_F_080: LibraryForm = {
   description:
     "La inspección del cargador y de los elementos de protección de quien lo opera, antes de operar: una por máquina y por día.",
   sections: sections(
-    section("identificacion", "Máquina y lugar", [
+    section("inspeccion", "Inspección", [
       equipment("Cargador"),
       workCenter(),
-    ]),
-    section("inspeccion", "Inspección", [
       checklist(
         "Inspección general del cargador",
         { scale: SCALE_BMNA, blocks },
@@ -132,7 +130,7 @@ export const SST_F_080: LibraryForm = {
         { scale: SCALE_SN, blocks: operatorBlocks },
         { id: "condiciones-operario" },
       ),
+      ...closing("Firma del operador"),
     ]),
-    closing("Firma del operador"),
   ),
 };

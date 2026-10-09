@@ -12,11 +12,7 @@ import {
   timeText,
   versionLine,
 } from "../lib/response-reading";
-import {
-  INACTIVE_BADGE,
-  STATUS_TONE_CLASS,
-  VOIDED_BADGE,
-} from "../lib/status";
+import { INACTIVE_BADGE, STATUS_TONE_CLASS, VOIDED_BADGE } from "../lib/status";
 
 type Person = { name?: string; email?: string } | null;
 

@@ -82,8 +82,10 @@ export const newField = (type: FieldType, label: string): FormField => ({
   type,
   label,
   required: false,
-  // Un texto largo, una lista de chequeo y una tabla no caben en menos.
-  size: FULL_WIDTH_TYPES.includes(type) ? "full" : "medium",
+  // Un texto largo, una lista de chequeo y una tabla no caben en menos. Una
+  // firma nace también a fila entera, pero se puede estrechar.
+  size:
+    FULL_WIDTH_TYPES.includes(type) || type === "signature" ? "full" : "medium",
   showInTable: false,
   config: initialConfig(type),
 });

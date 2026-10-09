@@ -161,7 +161,9 @@ export const SignatureFieldControl = ({
               maxLength={80}
               aria-invalid={invalid && !signerName.trim()}
               onChange={(event) => setSignerName(event.target.value)}
-              onBlur={() => void publish(strokes, effectiveName, signerDocument)}
+              onBlur={() =>
+                void publish(strokes, effectiveName, signerDocument)
+              }
             />
           </div>
           <div className="space-y-1.5">
@@ -174,7 +176,9 @@ export const SignatureFieldControl = ({
               autoComplete="off"
               maxLength={20}
               onChange={(event) => setSignerDocument(event.target.value)}
-              onBlur={() => void publish(strokes, effectiveName, signerDocument)}
+              onBlur={() =>
+                void publish(strokes, effectiveName, signerDocument)
+              }
             />
           </div>
         </div>
@@ -190,9 +194,7 @@ export const SignatureFieldControl = ({
         <svg
           id={id}
           role="img"
-          aria-label={
-            isEmpty ? "Recuadro para firmar, vacío" : "Firma trazada"
-          }
+          aria-label={isEmpty ? "Recuadro para firmar, vacío" : "Firma trazada"}
           viewBox={`0 0 ${CANVAS_WIDTH} ${CANVAS_HEIGHT}`}
           // `touch-none`: si no, arrastrar el dedo desplaza la página en vez
           // de dibujar.
@@ -282,7 +284,8 @@ async function renderSignature(
   context.lineWidth = 2.5;
   context.lineCap = "round";
   context.lineJoin = "round";
-  for (const stroke of strokes) context.stroke(new Path2D(strokeToPath(stroke)));
+  for (const stroke of strokes)
+    context.stroke(new Path2D(strokeToPath(stroke)));
 
   const blob = await new Promise<Blob | null>((resolve) =>
     canvas.toBlob(resolve, "image/png"),

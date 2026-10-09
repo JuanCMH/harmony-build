@@ -10,6 +10,7 @@ import {
   responseStatus,
   storedFieldValues,
 } from "./lib/form_validators";
+import { dashboardTabs, resultConfig } from "./lib/result_validators";
 import { permissionsSchema } from "./permissions";
 
 /** Sobre qué actuó una entrada de auditoría. Cada literal nombra una tabla:
@@ -250,6 +251,30 @@ const schema = defineSchema({
       "formId",
       "date",
     ]),
+
+  /* ──────────────────────── Resultados y tablero ────────────────────────── */
+
+  /** Lo que un formato entrega a partir de sus respuestas: un indicador, una
+   *  tendencia, un mapa de calor. **No guarda datos**: es la definición de un
+   *  cálculo, que se aplica al rango de fechas que se mire
+   *  (`docs/plans/2026-10-09-resultados-y-tablero-design.md`). */
+  formResults: defineTable({
+    projectId: v.id("projects"),
+    /** Requerida: un resultado no existe sin su formato (`01 §6.1`). */
+    formId: v.id("forms"),
+    name: v.string(),
+    config: resultConfig,
+    createdBy: v.id("users"),
+  })
+    .index("projectId", ["projectId"])
+    .index("formId", ["formId"]),
+
+  /** El tablero del proyecto: uno, con sus pestañas y los resultados que
+   *  enseña cada una. */
+  dashboards: defineTable({
+    projectId: v.id("projects"),
+    tabs: dashboardTabs,
+  }).index("projectId", ["projectId"]),
 });
 
 export default schema;

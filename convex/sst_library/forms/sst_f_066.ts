@@ -49,26 +49,24 @@ export const SST_F_066: LibraryForm = {
   description:
     "La revisión de la camilla de un centro de trabajo: ubicación, señalización, aseo y estado de sus partes.",
   sections: sections(
-    section("identificacion", "Lugar e inspector", [
+    section("inspeccion", "Inspección", [
       workCenter(),
       person("Quien inspecciona", ["cargo"], {
         id: "responsable",
         showInTable: true,
       }),
-    ]),
-    section("inspeccion", "Inspección", [
       checklist(
         "Estado de la camilla",
         { scale: SCALE_SN, blocks },
         { id: "inspeccion" },
       ),
+      ...closing(
+        "Firma del inspector",
+        observations("Novedades encontradas para ser corregidas", {
+          description:
+            "Las novedades encontradas deberán estar solucionadas antes de la próxima inspección.",
+        }),
+      ),
     ]),
-    closing(
-      "Firma del inspector",
-      observations("Novedades encontradas para ser corregidas", {
-        description:
-          "Las novedades encontradas deberán estar solucionadas antes de la próxima inspección.",
-      }),
-    ),
   ),
 };

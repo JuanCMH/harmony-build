@@ -188,6 +188,7 @@ aunque se reescriban:
 | `projects.test.ts` | Crear deja un propietario y un código; las lecturas **nunca** devuelven `joinCode`; el código sólo lo lee y lo renueva quien tiene `inviteUsers`; unirse concede `member` sin rol una sola vez; transferir mueve la fila y `projects.userId` a la vez; sólo el propietario elimina; la purga drena lo suyo y no toca al vecino. |
 | `members.test.ts` | **Las escaladas**: `assignRoles` no asciende a administrador, `expelUsers` no expulsa a uno, el propietario ni cambia ni sale; un rol de otro proyecto no se acepta; las lecturas no devuelven el documento de `users` entero. |
 | `logs.test.ts` | El autor sale de la sesión; sin sesión no se escribe; lo que hace la plataforma lo firma la plataforma; leer exige `viewLogs`; el intervalo se respeta; una entrada sin proyecto no la lee nadie; el día se calcula en hora de Colombia. |
+| `form-results.test.ts` | **Resultados y tablero**: definir un resultado exige `editForms` y queda en auditoría; alguien de otro proyecto no lo toca; se rechaza lo que no cuadra con los campos del formato y lo que pasa del tope; `compute` es de quien ve las respuestas de todos, no cuenta las anuladas, devuelve `null` con un rango que no lo es y dice qué resultado quedó sin su campo; el tablero lo ve `viewResponses` y lo arma `editProject`, no acepta un resultado de otro proyecto ni ids repetidos, y deja de mostrar el que se borró; borrar el formato y purgar el proyecto se llevan lo suyo; `installSst` instala resultados y tablero sin repetirlos. |
 
 Cada caso de esas suites corresponde a un agujero de `01 §10`. **Una prueba de
 aislamiento ataca desde fuera**: con la sesión de alguien que pertenece a otro
@@ -392,11 +393,36 @@ terminada:
 ```
 
 > Una pantalla vacía no dice si la vista funciona: el recorrido se hace con
-> datos de densidad real. No existe todavía una siembra de demostración; si se
-> escribe una, es **sólo para desarrollo** —funciones internas, invocables
-> únicamente con `bunx convex run`, que marcan con un prefijo todo lo que
-> crean, no modifican nada preexistente y saben borrar sólo lo suyo— y se
-> documenta en esta sección.
+> datos de densidad real. Una siembra de demostración es **sólo para
+> desarrollo** —funciones internas, invocables únicamente con
+> `bunx convex run`, que marcan con un prefijo todo lo que crean, no modifican
+> nada preexistente y saben borrar sólo lo suyo— y se documenta en esta
+> sección.
+
+**La siembra que existe: `convex/demoData.ts`.** Escribe las respuestas
+ficticias de un día en los formatos publicados de un proyecto, para recorrer
+los resultados y el tablero con datos:
+
+```bash
+bunx convex run demoData:seedDay '{"projectId":"…","date":"2026-10-08",
+  "plan":[{"formId":"…","count":6,"failRate":0.08}],
+  "signature":"<PNG en base64>","image":"<JPEG en base64>"}'
+```
+
+- Es genérica: genera un valor por **tipo de campo** a partir de la versión
+  publicada, sin conocer ningún formato. `hints` (por id de campo: `min`,
+  `max`, `texts`) acerca los datos a los de una obra.
+- Hasta 40 respuestas por llamada. Se siembra **del día más viejo al más
+  nuevo**: la fecha de negocio aquí se elige, y el orden de creación tiene que
+  seguir siendo el de las fechas.
+- Con semilla: la misma llamada da los mismos valores.
+- Todo pasa por `resolveValues`, igual que una respuesta de verdad.
+
+> [!CAUTION]
+> **Todavía no cumple la regla de arriba.** No marca lo que crea, suma al
+> `responseCount` de cada formato y no sabe retirar lo sembrado: sus respuestas
+> son indistinguibles de las reales. Hasta que lo haga, **no se ejecuta en un
+> deployment con datos que alguien quiera conservar**.
 
 ---
 

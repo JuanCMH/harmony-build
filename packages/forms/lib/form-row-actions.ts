@@ -31,6 +31,7 @@ export const FORM_ROW_ACTIONS = [
   "fill",
   "addEntry",
   "responses",
+  "results",
   "edit",
   "duplicate",
   "archive",
@@ -67,11 +68,20 @@ export const canOpenResponses = (
     : keys.viewResponses || keys.editCatalogs;
 };
 
-const canFillNow = (row: FormRowState) =>
+export const canFillNow = (row: FormRowState) =>
   row.kind === "record" && isPublished(row) && row.canFill;
 
 const canEditNow = (row: FormRowState) =>
   row.canEdit && row.status !== "archived";
+
+/** Los resultados resumen las respuestas de todos: piden verlas. Los de un
+ *  listado —sus vencimientos— también los ve quien lo gestiona. */
+export const canOpenResults = (
+  row: FormRowState,
+  keys: FormViewerKeys,
+): boolean =>
+  wasPublished(row) &&
+  (keys.viewResponses || (row.kind === "catalog" && keys.editCatalogs));
 
 export const REMOVE_BLOCKED_REASON =
   "Tiene respuestas: se archiva, no se elimina";
@@ -92,6 +102,7 @@ export const formRowActions = (
     actions.push({ key: "addEntry" });
   }
   if (canOpenResponses(row, keys)) actions.push({ key: "responses" });
+  if (canOpenResults(row, keys)) actions.push({ key: "results" });
   if (canEditNow(row)) actions.push({ key: "edit" });
   if (keys.createForms) actions.push({ key: "duplicate" });
 
@@ -114,16 +125,20 @@ export const formRowActions = (
 };
 
 /**
- * A dónde lleva pulsar la fila. Quien diligencia, a diligenciar; quien
- * consulta, a las respuestas; quien sólo construye, al constructor. `null` si
- * la fila no lleva a ningún sitio para quien mira.
+ * A dónde lleva pulsar la fila: al formato. Quien lo consulta o lo construye
+ * abre sus respuestas, y desde ahí tiene los resultados y el diseño; para
+ * diligenciar tiene el botón de la fila. Quien **sólo** diligencia va directo
+ * a diligenciar: es lo único que viene a hacer. Un formato sin publicar abre
+ * el constructor. `null` si la fila no lleva a ningún sitio para quien mira.
  */
 export const primaryRowAction = (
   row: FormRowState,
   keys: FormViewerKeys,
 ): Extract<FormRowActionKey, "fill" | "responses" | "edit"> | null => {
-  if (canFillNow(row)) return "fill";
-  if (canOpenResponses(row, keys)) return "responses";
+  const opensResponses = canOpenResponses(row, keys);
+  const managesIt = keys.viewResponses || row.canEdit;
+  if (canFillNow(row) && !(opensResponses && managesIt)) return "fill";
+  if (opensResponses) return "responses";
   if (canEditNow(row)) return "edit";
   return null;
 };
@@ -140,8 +155,10 @@ export const formRowActionLabel = (
       return "Añadir elemento";
     case "responses":
       return kind === "record" ? "Ver respuestas" : "Ver elementos";
+    case "results":
+      return "Ver resultados";
     case "edit":
-      return "Editar";
+      return kind === "record" ? "Editar el diseño" : "Editar el listado";
     case "duplicate":
       return "Duplicar";
     case "archive":

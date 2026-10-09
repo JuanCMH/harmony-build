@@ -47,6 +47,7 @@ describe("formRowActions", () => {
     expect(keysOf(row({ canFill: true, canEdit: true }), ALL_KEYS)).toEqual([
       "fill",
       "responses",
+      "results",
       "edit",
       "duplicate",
       "archive",
@@ -55,9 +56,10 @@ describe("formRowActions", () => {
   });
 
   it("quien sólo diligencia puede diligenciar y ver sus respuestas", () => {
-    expect(
-      keysOf(row({ canFill: true }), keys({ fillForms: true })),
-    ).toEqual(["fill", "responses"]);
+    expect(keysOf(row({ canFill: true }), keys({ fillForms: true }))).toEqual([
+      "fill",
+      "responses",
+    ]);
   });
 
   it("un borrador no se diligencia ni tiene respuestas que abrir", () => {
@@ -80,7 +82,7 @@ describe("formRowActions", () => {
         row({ status: "archived", canFill: true, canEdit: true }),
         ALL_KEYS,
       ),
-    ).toEqual(["responses", "duplicate", "unarchive", "remove"]);
+    ).toEqual(["responses", "results", "duplicate", "unarchive", "remove"]);
   });
 
   it("en un listado se añade un elemento, no se diligencia", () => {
@@ -89,6 +91,7 @@ describe("formRowActions", () => {
     ).toEqual([
       "addEntry",
       "responses",
+      "results",
       "edit",
       "duplicate",
       "archive",
@@ -99,7 +102,7 @@ describe("formRowActions", () => {
   it("sin `editCatalogs` no ofrece añadir elementos", () => {
     expect(
       keysOf(row({ kind: "catalog" }), keys({ viewResponses: true })),
-    ).toEqual(["responses"]);
+    ).toEqual(["responses", "results"]);
   });
 
   it("con respuestas, eliminar sale apagado y dice por qué", () => {
@@ -149,8 +152,22 @@ describe("canOpenResponses", () => {
 });
 
 describe("primaryRowAction", () => {
-  it("quien puede diligenciar, diligencia", () => {
-    expect(primaryRowAction(row({ canFill: true }), ALL_KEYS)).toBe("fill");
+  it("quien sólo diligencia, diligencia", () => {
+    expect(
+      primaryRowAction(row({ canFill: true }), keys({ fillForms: true })),
+    ).toBe("fill");
+  });
+
+  it("quien además consulta o construye abre el formato", () => {
+    expect(primaryRowAction(row({ canFill: true }), ALL_KEYS)).toBe(
+      "responses",
+    );
+    expect(
+      primaryRowAction(
+        row({ canFill: true, canEdit: true }),
+        keys({ fillForms: true }),
+      ),
+    ).toBe("responses");
   });
 
   it("quien consulta abre las respuestas", () => {

@@ -47,7 +47,7 @@ export const SST_F_118: LibraryForm = {
   description:
     "La revisión del botiquín de un vehículo, elemento por elemento: cuánto hay, en qué estado está y cuándo vence.",
   sections: sections(
-    section("identificacion", "Vehículo y responsable", [
+    section("inspeccion", "Inspección", [
       reference("Vehículo", CATALOG.vehicles, ["tipo-vehiculo"], {
         id: "vehiculo",
         placeholder: "Busca por placa",
@@ -58,8 +58,6 @@ export const SST_F_118: LibraryForm = {
         id: "responsable",
         showInTable: true,
       }),
-    ]),
-    section("inspeccion", "Inspección", [
       checklist(
         "Elementos del botiquín",
         {
@@ -74,7 +72,7 @@ export const SST_F_118: LibraryForm = {
             "B: existe y está en buenas condiciones. M: está en mal estado o está vencido.",
         },
       ),
+      ...closing("Firma del responsable", observations("Comentarios")),
     ]),
-    closing("Firma del responsable", observations("Comentarios")),
   ),
 };

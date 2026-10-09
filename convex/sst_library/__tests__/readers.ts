@@ -101,23 +101,38 @@ export const duplicates = (values: string[]): string[] => [
   ...new Set(values.filter((value, index) => values.indexOf(value) !== index)),
 ];
 
-/** Las filas de una sección en escritorio: los anchos de cada una, en orden. */
-export const rowsOf = (fields: FormField[]): number[] => {
-  const rows: number[] = [];
+/** Lo que ocupa cada tamaño en tableta, sobre seis columnas
+ *  (`packages/forms/lib/grid.ts`): sólo media fila y fila entera. */
+export const TABLET_COLUMNS: Record<FieldSize, number> = {
+  small: 3,
+  medium: 6,
+  large: 6,
+  full: 6,
+};
+
+/** Las filas de una sección: los campos de cada una, en orden. Por omisión,
+ *  en escritorio (doce columnas). */
+export const fieldRowsOf = (
+  fields: FormField[],
+  columns: Record<FieldSize, number> = COLUMNS,
+  total = 12,
+): FormField[][] => {
+  const rows: FormField[][] = [];
+  let row: FormField[] = [];
   let open = 0;
+  const close = () => {
+    rows.push(row);
+    row = [];
+    open = 0;
+  };
   for (const field of fields) {
-    const width = COLUMNS[field.size];
-    if (open + width > 12) {
-      rows.push(open);
-      open = 0;
-    }
+    const width = columns[field.size];
+    if (open + width > total) close();
+    row.push(field);
     open += width;
-    if (open === 12) {
-      rows.push(open);
-      open = 0;
-    }
+    if (open === total) close();
   }
-  if (open > 0) rows.push(open);
+  if (row.length > 0) close();
   return rows;
 };
 

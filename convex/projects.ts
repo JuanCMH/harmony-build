@@ -300,6 +300,8 @@ const LIGHT_TABLES = [
   "logs",
   "formCategories",
   "formResponseLinks",
+  "formResults",
+  "dashboards",
   "forms",
 ] as const;
 

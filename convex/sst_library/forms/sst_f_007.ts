@@ -4,10 +4,17 @@
  *  respuesta es **una entrega**, con los elementos que se dieron ese día: la
  *  fecha de entrega la pone el sistema y la ficha se reconstruye con el
  *  historial del trabajador. Diligencia quien entrega; quien recibe firma en
- *  ese mismo dispositivo, una vez por elemento, como en el papel.
+ *  ese mismo dispositivo, una vez por entrega.
  */
 
-import { choices, column, section, sections, table } from "../builders";
+import {
+  choices,
+  column,
+  section,
+  sections,
+  signature,
+  table,
+} from "../builders";
 import { CATEGORY, person, workCenter } from "../common";
 import type { LibraryForm } from "../types";
 
@@ -18,16 +25,23 @@ export const SST_F_007: LibraryForm = {
   code: "SST-F-007",
   category: CATEGORY.supplies,
   description:
-    "El registro de una entrega de dotación o de EPP a un trabajador, con la firma de recibido por cada elemento.",
+    "El registro de una entrega de dotación o de EPP a un trabajador, con su firma de recibido.",
   sections: sections(
-    section("identificacion", "Trabajador", [
+    // Una sola sección: es un formato corto, y partirlo en dos obligaba a
+    // cambiar de pestaña para tres campos.
+    section("entrega", "Entrega", [
       person("Trabajador", ["cedula", "cargo"], {
         id: "trabajador",
         showInTable: true,
       }),
-      workCenter({ description: "La obra o el área donde trabaja" }),
-    ]),
-    section("entrega", "Entrega", [
+      person("Quien entrega", ["cargo"], {
+        id: "quien-entrega",
+        showInTable: true,
+      }),
+      workCenter({
+        size: "full",
+        description: "La obra o el área donde trabaja",
+      }),
       table(
         "Elementos entregados",
         {
@@ -42,17 +56,17 @@ export const SST_F_007: LibraryForm = {
               required: true,
               options: choices(["Reposición", "Entrega periódica"]),
             }),
-            column("Recibí a conformidad", "signature", {
-              id: "recibido",
-              required: true,
-            }),
           ],
         },
         { id: "elementos", required: true, showInTable: true },
       ),
-      person("Quien entrega", ["cargo"], {
-        id: "quien-entrega",
-        showInTable: true,
+      // Una sola firma por entrega. El papel pide una por fila porque su hoja
+      // acumula entregas de meses; aquí cada entrega es una respuesta, y todo
+      // lo de la tabla se recibe en el mismo momento.
+      signature("Recibí a conformidad", "other", {
+        id: "recibido",
+        required: true,
+        description: "Firma el trabajador que recibe",
       }),
     ]),
   ),

@@ -1,5 +1,7 @@
-/** SST-F-046 · Anexo 2 · Control de ausentismo, morbilidad, incapacidad y
- *  primeros auxilios.
+/** Control de ausentismo, morbilidad, incapacidad y primeros auxilios.
+ *
+ *  En el papel es una hoja del informe de gestión SST (`SST-F-046`); aquí es
+ *  un formato con nombre propio, que se diligencia por separado.
  *
  *  Una respuesta por evento, no una tabla del mes: el evento se registra
  *  cuando ocurre. El diagnóstico es texto corto: el catálogo CIE-10 no entra
@@ -20,16 +22,16 @@ import {
 import { CATEGORY, person, workCenter } from "../common";
 import type { LibraryForm } from "../types";
 
-export const SST_F_046_A2: LibraryForm = {
-  key: "sst-f-046-a2",
+export const CONTROL_DE_AUSENTISMO: LibraryForm = {
+  key: "control-de-ausentismo",
   kind: "record",
-  name: "Anexo 2 · Control de ausentismo",
-  code: "SST-F-046-A2",
-  category: CATEGORY.report,
+  name: "Control de ausentismo",
+  category: CATEGORY.management,
   description:
     "El registro de una ausencia, incapacidad o atención de primeros auxilios: quién, por qué, de cuándo a cuándo y qué se hizo.",
   sections: sections(
-    section("identificacion", "Trabajador", [
+    // Una sola sección: son trece campos, y se recorren de arriba abajo.
+    section("ausencia", "Ausencia", [
       person("Trabajador", ["cedula", "cargo"], {
         id: "trabajador",
         showInTable: true,
@@ -48,8 +50,6 @@ export const SST_F_046_A2: LibraryForm = {
         id: "genero",
         size: "medium",
       }),
-    ]),
-    section("ausencia", "Ausencia", [
       select(
         "Tipo de ausencia",
         choices([
@@ -84,8 +84,6 @@ export const SST_F_046_A2: LibraryForm = {
         description: "El código CIE-10 o el diagnóstico de la incapacidad",
         placeholder: "ej: M54.5 Lumbago no especificado",
       }),
-    ]),
-    section("descripcion", "Descripción", [
       textarea("Descripción de lo ocurrido o del motivo de la ausencia", {
         id: "descripcion",
       }),

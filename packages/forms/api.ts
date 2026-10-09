@@ -19,14 +19,11 @@ export const useGetFormCategories = (
   data: typeof api.formCategories.get._args | "skip",
 ) => useFetch(api.formCategories.get, data);
 
-export const useCreateFormCategory = () =>
-  useMutate(api.formCategories.create);
+export const useCreateFormCategory = () => useMutate(api.formCategories.create);
 
-export const useUpdateFormCategory = () =>
-  useMutate(api.formCategories.update);
+export const useUpdateFormCategory = () => useMutate(api.formCategories.update);
 
-export const useRemoveFormCategory = () =>
-  useMutate(api.formCategories.remove);
+export const useRemoveFormCategory = () => useMutate(api.formCategories.remove);
 
 /* ─────────────────────────────── Formatos ──────────────────────────────── */
 
@@ -109,6 +106,36 @@ export const useListResponses = (
   data: Omit<typeof api.formResponses.list._args, "paginationOpts"> | "skip",
 ) => usePaginatedFetch(api.formResponses.list, data, RESPONSES_PAGE_SIZE);
 
+/* ─────────────────────────────── Resultados ────────────────────────────── */
+
+/** Las definiciones de los resultados de un formato. `null` sin acceso. */
+/** Los indicadores del proyecto, para armar una cifra compuesta. */
+export const useGetProjectIndicators = (
+  data: typeof api.formResults.indicators._args | "skip",
+) => useFetch(api.formResults.indicators, data);
+
+export const useGetFormResults = (
+  data: typeof api.formResults.get._args | "skip",
+) => useFetch(api.formResults.get, data);
+
+/**
+ * Los resultados de un formato, calculados para un rango de fechas. `null`
+ * sin `viewResponses` o con un rango que no es válido.
+ *
+ * Todos los resultados del formato salen de la misma consulta: varias
+ * tarjetas del mismo formato comparten la suscripción y las respuestas se
+ * leen una sola vez.
+ */
+export const useComputeFormResults = (
+  data: typeof api.formResults.compute._args | "skip",
+) => useFetch(api.formResults.compute, data);
+
+export const useCreateFormResult = () => useMutate(api.formResults.create);
+
+export const useUpdateFormResult = () => useMutate(api.formResults.update);
+
+export const useRemoveFormResult = () => useMutate(api.formResults.remove);
+
 /* ──────────────────────── Elementos de un listado ──────────────────────── */
 
 export const useCreateEntry = () => useMutate(api.formEntries.createEntry);
@@ -120,7 +147,9 @@ export const useSetEntryActive = () =>
 
 /** Lanza sin `viewResponses` ni `editCatalogs`. */
 export const useListEntries = (
-  data: Omit<typeof api.formEntries.listEntries._args, "paginationOpts"> | "skip",
+  data:
+    | Omit<typeof api.formEntries.listEntries._args, "paginationOpts">
+    | "skip",
 ) => usePaginatedFetch(api.formEntries.listEntries, data, RESPONSES_PAGE_SIZE);
 
 /** Hasta treinta elementos activos por título: alimenta el selector de una

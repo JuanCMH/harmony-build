@@ -1,9 +1,6 @@
 import type { ValueProblemCode } from "@/convex/lib/error_messages";
 import type { FormContext } from "@/convex/lib/form_context";
-import {
-  pruneFormValues,
-  visibleSections,
-} from "@/convex/lib/form_evaluation";
+import { pruneFormValues, visibleSections } from "@/convex/lib/form_evaluation";
 import type {
   ChecklistAnswer,
   FormSection,

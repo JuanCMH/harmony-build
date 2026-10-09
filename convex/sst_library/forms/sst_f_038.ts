@@ -53,13 +53,11 @@ export const SST_F_038: LibraryForm = {
   description:
     "La inspección de la pulidora, inalámbrica o eléctrica, antes de usarla: una por equipo y por día.",
   sections: sections(
-    section("identificacion", "Equipo y lugar", [
+    section("inspeccion", "Inspección", [
       equipment("Pulidora", {
         fill: ["tipo-pulidora", "marca", "referencia"],
       }),
       workCenter(),
-    ]),
-    section("inspeccion", "Inspección", [
       checklist(
         "Estado de la pulidora",
         { scale: SCALE_BMNA, blocks },
@@ -69,7 +67,7 @@ export const SST_F_038: LibraryForm = {
             "La pila y el cargador sólo aplican a la pulidora inalámbrica: en la eléctrica, marca N.A.",
         },
       ),
+      ...closing("Firma del operador"),
     ]),
-    closing("Firma del operador"),
   ),
 };

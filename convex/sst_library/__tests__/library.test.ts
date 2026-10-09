@@ -20,11 +20,13 @@ import {
 import { SST_LIBRARY } from "../index";
 import { LIBRARY_REFERENCE_PREFIX } from "../types";
 import {
+  COLUMNS,
   catalogs,
   DATE_PATTERN,
   duplicates,
   EACH_FORM,
   fieldOf,
+  fieldRowsOf,
   fieldsOf,
   ID_PATTERN,
   idsOf,
@@ -32,7 +34,7 @@ import {
   labelsOf,
   records,
   referencesOf,
-  rowsOf,
+  TABLET_COLUMNS,
 } from "./readers";
 
 /* ─────────────────────────────── La biblioteca ──────────────────────────── */
@@ -60,11 +62,29 @@ describe("biblioteca SST", () => {
     ).toEqual([]);
   });
 
-  it("cada formato lleva el código de su documento, y su clave sale de él", () => {
+  it("un formato con código lleva el de su documento, y su clave sale de él", () => {
     for (const form of records) {
-      expect(form.code, form.key).toMatch(/^SST-F-\d{3}(-A\d)?$/);
-      expect(form.key).toBe(form.code?.toLowerCase());
+      if (form.code === undefined) continue;
+      expect(form.code, form.key).toMatch(/^SST-F-\d{3}$/);
+      expect(form.key).toBe(form.code.toLowerCase());
     }
+  });
+
+  it("ningún formato se llama «anexo»: cada uno tiene su nombre", () => {
+    // En el papel, cinco son hojas del informe `SST-F-046`. Aquí son formatos
+    // sueltos, sin un código que no existe en los documentos del cliente.
+    for (const form of SST_LIBRARY) {
+      expect(form.name.toLowerCase(), form.key).not.toContain("anexo");
+      expect(form.code ?? "", form.key).not.toContain("046");
+    }
+  });
+
+  it("ningún formato se parte en más secciones de las que necesita", () => {
+    const sectioned = SST_LIBRARY.filter((form) => form.sections.length > 1);
+    expect(sectioned.map((form) => form.key)).toEqual([
+      "personal",
+      "gestion-ambiental",
+    ]);
   });
 
   it("usa sólo las categorías acordadas", () => {
@@ -72,7 +92,7 @@ describe("biblioteca SST", () => {
       "Inspecciones preoperacionales",
       "Inspecciones de emergencia",
       "Dotación",
-      "Informe de gestión",
+      "Gestión SST",
     ]);
   });
 });
@@ -234,14 +254,29 @@ describe.each(EACH_FORM)("%s", (_key, form) => {
     }
   });
 
-  it("ninguna fila de escritorio queda incompleta", () => {
+  it("ninguna fila queda incompleta, ni en escritorio ni en tableta", () => {
+    // Un campo condicional se mira puesto y quitado: al aparecer no puede
+    // descuadrar a los demás (`03 §6.2`).
+    const layouts = [
+      { name: "escritorio", columns: COLUMNS, total: 12 },
+      { name: "tableta", columns: TABLET_COLUMNS, total: 6 },
+    ];
     for (const section of form.sections) {
-      const rows = rowsOf(section.fields);
-      const last = rows.pop() ?? 12;
-      expect(rows, `${section.id}: filas intermedias`).toEqual(
-        rows.map(() => 12),
-      );
-      expect(last, `${section.id}: última fila`).toBeGreaterThanOrEqual(6);
+      const always = section.fields.filter((field) => !field.config.visibility);
+      for (const shown of [section.fields, always]) {
+        for (const { name, columns, total } of layouts) {
+          for (const row of fieldRowsOf(shown, columns, total)) {
+            const width = row.reduce(
+              (sum, field) => sum + columns[field.size],
+              0,
+            );
+            expect(
+              width,
+              `${section.id}, ${name}: ${row.map((field) => field.id).join(" + ")}`,
+            ).toBe(total);
+          }
+        }
+      }
     }
   });
 

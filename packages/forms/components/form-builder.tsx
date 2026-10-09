@@ -75,6 +75,7 @@ import { FormCanvas } from "./form-canvas";
 import { FormBuilderActions, FormBuilderStatus } from "./form-builder-actions";
 import { FormBuilderAside } from "./form-builder-aside";
 import { type PaletteDragData, PaletteDragPreview } from "./form-field-palette";
+import { FormTabs } from "./form-tabs";
 import { FormSectionTabs } from "./form-section-tabs";
 import { FieldBehaviorSheet } from "./sheets/field-behavior-sheet";
 import { FieldTypeSheet } from "./sheets/field-type-sheet";
@@ -482,6 +483,9 @@ export const FormBuilder = () => {
     );
   }
 
+  // Quien diseña ve además las respuestas si las consulta o si diligencia.
+  const hasFormTabs = !!form && (form.canViewAll || form.canFill);
+
   return (
     <PageShell>
       <ConfirmDialog />
@@ -535,9 +539,20 @@ export const FormBuilder = () => {
       >
         <FormBuilderStatus badges={statusBadges} />
       </PageHeader>
+      {form && hasFormTabs ? (
+        <FormTabs
+          formId={formId}
+          active="design"
+          form={form}
+          canList={hasFormTabs}
+          hasUnsavedChanges={isDirty}
+        />
+      ) : null}
 
       <PageMain
         variant="editor"
+        // Las pestañas del formato ocupan 2,5rem más bajo la cabecera.
+        className={hasFormTabs ? "lg:h-[calc(100svh-6.5rem)]" : undefined}
         isLoading={isLoadingForm || baseline === null}
         loadingText="Se está cargando el formato."
       >

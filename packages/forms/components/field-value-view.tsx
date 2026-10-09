@@ -146,10 +146,7 @@ export const FieldValueView = ({
     case "phone": {
       const text = fieldText(field, value).trim();
       return isPhone(text) ? (
-        <a
-          href={`tel:${text.replace(/[^\d+]/g, "")}`}
-          className={LINK_CLASS}
-        >
+        <a href={`tel:${text.replace(/[^\d+]/g, "")}`} className={LINK_CLASS}>
           {text}
         </a>
       ) : (
@@ -161,9 +158,7 @@ export const FieldValueView = ({
     case "currency":
     case "date":
     case "time":
-      return (
-        <p className="text-sm tabular-nums">{fieldText(field, value)}</p>
-      );
+      return <p className="text-sm tabular-nums">{fieldText(field, value)}</p>;
 
     default:
       return <p className="text-sm break-words">{fieldText(field, value)}</p>;

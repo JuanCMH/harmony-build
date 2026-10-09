@@ -1,4 +1,7 @@
-/** SST-F-046 · Anexo 4 · Gestión ambiental.
+/** Gestión ambiental.
+ *
+ *  En el papel es una hoja del informe de gestión SST (`SST-F-046`); aquí es
+ *  un formato con nombre propio, que se diligencia por separado.
  *
  *  Un registro por día, con las mismas columnas de la hoja. Ninguna cantidad
  *  es obligatoria: el día que no se generó un residuo, su campo se deja vacío.
@@ -11,30 +14,27 @@ import type { LibraryForm } from "../types";
 const kilograms = (label: string, id: string, extras: FieldExtras = {}) =>
   number(label, { id, placeholder: "ej: 12,5", ...extras });
 
-export const SST_F_046_A4: LibraryForm = {
-  key: "sst-f-046-a4",
+export const GESTION_AMBIENTAL: LibraryForm = {
+  key: "gestion-ambiental",
   kind: "record",
-  name: "Anexo 4 · Gestión ambiental",
-  code: "SST-F-046-A4",
-  category: CATEGORY.report,
+  name: "Gestión ambiental",
+  category: CATEGORY.management,
   description:
     "El registro diario de residuos generados y aprovechados, y de los consumos de agua, combustible y madera.",
   sections: sections(
-    section("identificacion", "Lugar y jornada", [
-      workCenter(),
-      number("Jornadas de recolección", {
-        id: "jornadas-recoleccion",
-        size: "medium",
-        showInTable: true,
-        description:
-          "Cuántas jornadas de recolección de residuos se hicieron en el día",
-        placeholder: "ej: 1",
-      }),
-    ]),
     section(
-      "residuos-solidos",
-      "Residuos sólidos",
+      "residuos",
+      "Residuos",
       [
+        workCenter(),
+        number("Jornadas de recolección", {
+          id: "jornadas-recoleccion",
+          size: "medium",
+          showInTable: true,
+          description:
+            "Cuántas jornadas de recolección de residuos se hicieron en el día",
+          placeholder: "ej: 1",
+        }),
         kilograms("Cartón", "carton", { description: "Reciclable" }),
         kilograms("Plástico", "plastico", { description: "Reciclable" }),
         kilograms("Papel", "papel", { description: "Reciclable" }),
@@ -59,21 +59,19 @@ export const SST_F_046_A4: LibraryForm = {
             "Residuos de construcción y demolición: concreto, escombros, acero",
         }),
         kilograms("Otros", "otros-residuos"),
+        number("RCD aprovechado: concreto", {
+          id: "rcd-concreto",
+          description: "Residuos de concreto aprovechados en obra",
+        }),
+        number("RCD aprovechado: acero", {
+          id: "rcd-acero",
+          description: "Residuos de acero aprovechados en obra",
+        }),
+        number("Aceites usados (galones)", { id: "aceites-usados" }),
+        number("Residuos de letrinas (galones)", { id: "residuos-letrinas" }),
       ],
-      "Lo generado en el día, en kilogramos.",
+      "Lo generado en el día. Los residuos sólidos van en kilogramos.",
     ),
-    section("aprovechados-liquidos", "Residuos aprovechados y líquidos", [
-      number("RCD aprovechado: concreto", {
-        id: "rcd-concreto",
-        description: "Residuos de concreto aprovechados en obra",
-      }),
-      number("RCD aprovechado: acero", {
-        id: "rcd-acero",
-        description: "Residuos de acero aprovechados en obra",
-      }),
-      number("Aceites usados (galones)", { id: "aceites-usados" }),
-      number("Residuos de letrinas (galones)", { id: "residuos-letrinas" }),
-    ]),
     section("consumos", "Consumos", [
       number("Agua potable (litros)", {
         id: "agua-potable",

@@ -72,9 +72,7 @@ export function ensureRows(
   config: TableConfig,
   required: boolean,
 ): DraftRow[] {
-  const rows: DraftRow[] = Array.isArray(value)
-    ? value.filter(isDraftRow)
-    : [];
+  const rows: DraftRow[] = Array.isArray(value) ? value.filter(isDraftRow) : [];
   while (rows.length < minimumRows(config, required)) {
     rows.push(emptyRow(rows));
   }
@@ -96,7 +94,8 @@ export const canRemoveRow = (
 export const addRow = (
   rows: readonly DraftRow[],
   config: TableConfig,
-): DraftRow[] => (canAddRow(rows, config) ? [...rows, emptyRow(rows)] : [...rows]);
+): DraftRow[] =>
+  canAddRow(rows, config) ? [...rows, emptyRow(rows)] : [...rows];
 
 /** Quita una fila, si la tabla puede quedarse con una menos. */
 export const removeRow = (

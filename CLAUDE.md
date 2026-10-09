@@ -26,6 +26,13 @@ SST vive en `convex/sst_library/` y se instala en un proyecto con
 `bunx convex run formLibrary:installSst '{"projectId":"…","withSamples":true}'`
 (`"update":true` publica una versión nueva de lo que cambió en la biblioteca).
 
+Los resultados de los formatos y el tablero del proyecto están implementados
+según `docs/plans/2026-10-09-resultados-y-tablero-design.md`. `installSst`
+instala también los resultados y el tablero de la biblioteca
+(`convex/sst_library/results.ts`): no repite un resultado que ya está ni pisa
+un tablero existente. Las respuestas de demostración se siembran con
+`bunx convex run demoData:seedDay` (`04-reglas-testing §7`).
+
 <!-- convex-ai-start -->
 
 This project uses [Convex](https://convex.dev) as its backend.

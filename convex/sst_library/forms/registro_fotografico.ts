@@ -1,4 +1,7 @@
-/** SST-F-046 · Anexo 6 · Registro fotográfico.
+/** Registro fotográfico.
+ *
+ *  En el papel es una hoja del informe de gestión SST (`SST-F-046`); aquí es
+ *  un formato con nombre propio, que se diligencia por separado.
  *
  *  Una tabla con una fila por fotografía. El papel las numera y las agrupa
  *  por semana reportada, cinco por semana: aquí el número es el de la fila y
@@ -9,16 +12,15 @@ import { column, date, section, sections, table } from "../builders";
 import { CATEGORY, workCenter } from "../common";
 import type { LibraryForm } from "../types";
 
-export const SST_F_046_A6: LibraryForm = {
-  key: "sst-f-046-a6",
+export const REGISTRO_FOTOGRAFICO: LibraryForm = {
+  key: "registro-fotografico",
   kind: "record",
-  name: "Anexo 6 · Registro fotográfico",
-  code: "SST-F-046-A6",
-  category: CATEGORY.report,
+  name: "Registro fotográfico",
+  category: CATEGORY.management,
   description:
     "Las fotografías de la semana reportada, cada una con el lugar donde se tomó y sus observaciones.",
   sections: sections(
-    section("identificacion", "Lugar y semana reportada", [
+    section("fotografias", "Fotografías", [
       workCenter(),
       date("Semana reportada: desde", {
         id: "semana-desde",
@@ -28,8 +30,6 @@ export const SST_F_046_A6: LibraryForm = {
         id: "semana-hasta",
         showInTable: true,
       }),
-    ]),
-    section("fotografias", "Fotografías", [
       table(
         "Fotografías",
         {

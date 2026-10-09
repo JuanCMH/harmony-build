@@ -17,7 +17,9 @@ describe("formatos de archivo", () => {
   });
 
   it("apagar un grupo no se lleva los demás", () => {
-    expect(toggleFormatGroup([".pdf", ".doc", ".docx"], word)).toEqual([".pdf"]);
+    expect(toggleFormatGroup([".pdf", ".doc", ".docx"], word)).toEqual([
+      ".pdf",
+    ]);
   });
 
   it("describe los grupos como se piensan", () => {
@@ -29,7 +31,9 @@ describe("formatos de archivo", () => {
 
   it("acepta por extensión, sin importar mayúsculas", () => {
     const formats = toggleFormatGroup([], word) ?? [];
-    expect(acceptsFile(formats, { name: "Contrato.DOCX", type: "" })).toBe(true);
+    expect(acceptsFile(formats, { name: "Contrato.DOCX", type: "" })).toBe(
+      true,
+    );
     expect(acceptsFile(formats, { name: "foto.png", type: "image/png" })).toBe(
       false,
     );

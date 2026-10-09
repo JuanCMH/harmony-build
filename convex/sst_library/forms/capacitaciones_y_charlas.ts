@@ -1,4 +1,7 @@
-/** SST-F-046 · Anexo 3 · Seguimiento de capacitación y charlas de seguridad.
+/** Capacitaciones y charlas de seguridad.
+ *
+ *  En el papel es una hoja del informe de gestión SST (`SST-F-046`); aquí es
+ *  un formato con nombre propio, que se diligencia por separado.
  *
  *  Una respuesta por capacitación o charla. La columna «Total de horas» de la
  *  hoja repite las horas (`=F9`), así que no es un campo: el total del mes es
@@ -9,12 +12,11 @@ import { number, section, sections, text } from "../builders";
 import { CATEGORY, workCenter } from "../common";
 import type { LibraryForm } from "../types";
 
-export const SST_F_046_A3: LibraryForm = {
-  key: "sst-f-046-a3",
+export const CAPACITACIONES_Y_CHARLAS: LibraryForm = {
+  key: "capacitaciones-y-charlas",
   kind: "record",
-  name: "Anexo 3 · Capacitación y charlas",
-  code: "SST-F-046-A3",
-  category: CATEGORY.report,
+  name: "Capacitaciones y charlas",
+  category: CATEGORY.management,
   description:
     "El registro de una capacitación o charla de seguridad: el tema, cuántas personas participaron y cuánto duró.",
   sections: sections(

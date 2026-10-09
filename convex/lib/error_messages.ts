@@ -146,6 +146,24 @@ export const formsErrors = {
       .join(" → ")}`,
 };
 
+export const formResultsErrors = {
+  userNotAuthenticated: "Usuario no autenticado",
+  insufficientPermissions: "No tienes los permisos necesarios para esta acción",
+  formNotFound: "Formato no encontrado",
+  resultNotFound: "Resultado no encontrado",
+  formNotPublished: "Publica el formato antes de definir sus resultados",
+  tooManyResults: "Este formato ya tiene el máximo de resultados",
+};
+
+export const dashboardsErrors = {
+  userNotAuthenticated: "Usuario no autenticado",
+  insufficientPermissions: "No tienes los permisos necesarios para esta acción",
+  invalidTabs: "Un tablero lleva entre 1 y 8 pestañas, cada una con su nombre",
+  invalidWidgets: "Una pestaña admite hasta 12 resultados",
+  duplicateId: "Hay dos pestañas o dos resultados con el mismo identificador",
+  resultNotFound: "Uno de los resultados ya no existe en este proyecto",
+};
+
 export const formResponsesErrors = {
   userNotAuthenticated: "Usuario no autenticado",
   insufficientPermissions: "No tienes los permisos necesarios para esta acción",

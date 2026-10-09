@@ -65,17 +65,15 @@ export const SST_F_090: LibraryForm = {
   description:
     "La inspección de la prensa hidráulica antes de usarla: una por equipo y por día.",
   sections: sections(
-    section("identificacion", "Equipo y lugar", [
+    section("inspeccion", "Inspección", [
       equipment("Prensa hidráulica"),
       workCenter(),
-    ]),
-    section("inspeccion", "Inspección", [
       checklist(
         "Estado de la prensa",
         { scale: SCALE_BMNA, blocks },
         { id: "inspeccion" },
       ),
+      ...closing("Firma del operador"),
     ]),
-    closing("Firma del operador"),
   ),
 };

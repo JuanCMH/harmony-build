@@ -318,6 +318,12 @@ export const remove = mutation({
       .withIndex("formId_number", (q) => q.eq("formId", args.id))
       .collect();
     for (const version of versions) await ctx.db.delete(version._id);
+    // Sus resultados tampoco existen sin él; el tablero deja de enseñarlos.
+    const results = await ctx.db
+      .query("formResults")
+      .withIndex("formId", (q) => q.eq("formId", args.id))
+      .collect();
+    for (const result of results) await ctx.db.delete(result._id);
     await ctx.db.delete(args.id);
 
     await ctx.runMutation(internal.logs.create, {

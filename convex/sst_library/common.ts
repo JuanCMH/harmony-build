@@ -8,8 +8,6 @@ import {
   choice,
   type FieldExtras,
   reference,
-  section,
-  type SectionDraft,
   signature,
   textarea,
 } from "./builders";
@@ -29,7 +27,7 @@ export const CATEGORY = {
   preoperational: "Inspecciones preoperacionales",
   emergency: "Inspecciones de emergencia",
   supplies: "Dotación",
-  report: "Informe de gestión",
+  management: "Gestión SST",
 } as const;
 
 /** Las tres capacidades de extintor que trae el papel. */
@@ -92,13 +90,10 @@ export const observations = (
 export const authorSignature = (label: string): FormField =>
   signature(label, "author", { id: "firma", required: true });
 
-/** La última sección de toda inspección: las observaciones generales, que no
- *  son obligatorias, y la firma, que sí. */
+/** Lo último de toda inspección: las observaciones generales, que no son
+ *  obligatorias, y la firma, que sí. Van al final de la misma sección que la
+ *  lista de chequeo: una inspección se recorre de arriba abajo, sin pestañas. */
 export const closing = (
   signatureLabel: string,
   notes: FormField = observations(),
-): SectionDraft =>
-  section("cierre", "Observaciones y firma", [
-    notes,
-    authorSignature(signatureLabel),
-  ]);
+): FormField[] => [notes, authorSignature(signatureLabel)];

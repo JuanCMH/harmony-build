@@ -43,7 +43,11 @@ export const CreateCategoryModal = ({
   };
 
   return (
-    <HarmonyModal open={open} onOpenChange={onOpenChange} maxWidth="sm:max-w-md">
+    <HarmonyModal
+      open={open}
+      onOpenChange={onOpenChange}
+      maxWidth="sm:max-w-md"
+    >
       <HarmonyModalHeader
         icon={ENTITY_ICONS.category}
         title="Crear categoría"

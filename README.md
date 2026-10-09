@@ -4,8 +4,8 @@ Harmony Build es la plataforma con la que una empresa de construcción deja de
 diligenciar en papel o en Excel sus formatos de obra —inspecciones
 preoperacionales de vehículos y equipos, entrega de dotación y EPP,
 inspecciones de botiquines, extintores, camillas y kits de derrames, informes
-de SST— y los tiene digitalizados, con sus respuestas guardadas, listables y,
-más adelante, graficadas.
+de SST— y los tiene digitalizados, con sus respuestas guardadas, listables y
+graficadas.
 
 La promesa: que el dato de la obra exista en el momento en que ocurre, con
 nombre, fecha y responsable, y no en una hoja que alguien transcribe (o pierde)
@@ -33,12 +33,17 @@ trabajar y la familia de componentes `Harmony*`. El dominio es nuevo.
 - **Diligenciar**, pensado para el teléfono, con borrador en el dispositivo.
 - **Consultar**: respuestas con filtros, anular con motivo, elementos de los
   listados con su historial.
+- **Resultados y tablero**: cada formato define lo que se calcula de sus
+  respuestas —indicador, tendencia, distribución, tabla, cumplimiento,
+  hallazgos, mapa de calor, vencimientos—, y el proyecto los reúne en un
+  tablero con pestañas, para el rango de fechas que se elija.
 - **Biblioteca SST**: los formatos en papel del cliente, listos para instalar
-  (`CLAUDE.md` dice cómo).
+  con sus resultados y su tablero (`CLAUDE.md` dice cómo).
 - **Auditoría** de cada acto importante.
 
-Lo que viene: las gráficas del panel, la exportación a Excel y PDF, y la
-revisión semanal con las firmas de quien autoriza y quien verifica.
+Lo que viene: la exportación a Excel y PDF, los filtros por campo en los
+resultados, y la revisión semanal con las firmas de quien autoriza y quien
+verifica.
 
 ## Quién lo usa
 
@@ -47,7 +52,8 @@ revisión semanal con las firmas de quien autoriza y quien verifica.
   calidad o dirección de obra, y trabaja desde escritorio.
 - **Quien diligencia**: conductores, operarios, inspectores. Lo hace a diario,
   desde el teléfono, en la obra, con prisa y a veces con mala conexión.
-- **Quien consulta**: revisa las respuestas y, después, las gráficas.
+- **Quien consulta**: revisa las respuestas, los resultados de cada formato y
+  el tablero del proyecto.
 
 ## Stack técnico
 
@@ -58,6 +64,7 @@ revisión semanal con las firmas de quien autoriza y quien verifica.
 - **Autenticación**: `@convex-dev/auth` con los proveedores Password y Google;
   Resend para el código de restablecimiento.
 - **Estado y utilidades**: Jotai, nuqs, date-fns, sonner, motion, lucide-react.
+- **Gráficas**: Recharts.
 - **Calidad**: Biome, Vitest, convex-test, Playwright.
 - **Gestor de paquetes**: Bun.
 - **Móvil**: web responsive instalable como PWA. No hay app nativa: el teléfono
@@ -71,7 +78,7 @@ La tabla completa, con la librería canónica de cada propósito, está en
 | Carpeta | Qué contiene |
 |---|---|
 | `app/` | Rutas de Next.js. `auth/` es la única pública; `(harmony)/` es la aplicación con sesión. |
-| `packages/` | Un módulo por dominio: `auth`, `users`, `projects`, `members`, `roles`, `logs`. Cada uno con su `api.ts`, que es el único acceso a Convex. |
+| `packages/` | Un módulo por dominio: `auth`, `users`, `projects`, `members`, `roles`, `logs`, `forms`, `dashboard`. Cada uno con su `api.ts`, que es el único acceso a Convex. |
 | `convex/` | Backend: schema, funciones, permisos, auditoría y autenticación. `lib/` para los helpers, `__tests__/` para las pruebas. |
 | `components/ui/` | Primitivos de shadcn/ui, con modificaciones propias. No se regeneran. |
 | `components/harmony/` | La capa propia del sistema de diseño: `HarmonyModal`, `HarmonySheet`, `PageShell`, selectores. |
@@ -234,7 +241,8 @@ dos en cada push a `main` y en cada pull request.
 | `/auth` | Autenticación. La única ruta pública. |
 | `/` | Redirige a `/projects`. |
 | `/projects` | Redirige al primer proyecto activo, o abre la bienvenida. |
-| `/projects/[projectId]` | Inicio del proyecto. |
+| `/projects/[projectId]` | Inicio del proyecto, con el tablero. |
+| `/projects/[projectId]/formats/[formId]/results` | Resultados de un formato. |
 | `/projects/[projectId]/registros` | Auditoría. |
 | `/projects/[projectId]/ajustes` | Ajustes del proyecto. |
 | `/projects/[projectId]/ajustes/usuarios` | Miembros. |

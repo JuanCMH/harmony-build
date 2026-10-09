@@ -248,7 +248,10 @@ describe("sectionControllerCandidates", () => {
     fields: FormField[],
   ): FormSection => ({ id, label: id, order, fields });
 
-  const first = section("uno", 1, [vehicle, field("lista", { type: "checklist" })]);
+  const first = section("uno", 1, [
+    vehicle,
+    field("lista", { type: "checklist" }),
+  ]);
   const second = section("dos", 2, [field("placa")]);
   const third = section("tres", 3, [field("final")]);
 
@@ -271,7 +274,11 @@ describe("sectionControllerCandidates", () => {
   });
 
   it("lo que ofrece lo acepta la validación del formato", () => {
-    const [candidate] = sectionControllerCandidates(second, [first, second], []);
+    const [candidate] = sectionControllerCandidates(
+      second,
+      [first, second],
+      [],
+    );
     const problems = validateForm(
       [
         first,
@@ -350,7 +357,12 @@ describe("describeComputed", () => {
     ).toBe("«Vencimiento» + 2 años");
     expect(
       describeComputed(
-        withRecipe({ kind: "dateAdd", of: "vence", amount: -1, unit: "months" }),
+        withRecipe({
+          kind: "dateAdd",
+          of: "vence",
+          amount: -1,
+          unit: "months",
+        }),
         all,
       ),
     ).toBe("«Vencimiento» − 1 mes");
@@ -395,9 +407,11 @@ describe("operandCandidates y newComputed", () => {
 
   it("sólo ofrece operandos del tipo que la receta pide", () => {
     expect(
-      operandCandidates(expiry, [issued, remaining, note, expiry], "dateAdd").map(
-        (item) => item.id,
-      ),
+      operandCandidates(
+        expiry,
+        [issued, remaining, note, expiry],
+        "dateAdd",
+      ).map((item) => item.id),
     ).toEqual(["expedicion"]);
   });
 

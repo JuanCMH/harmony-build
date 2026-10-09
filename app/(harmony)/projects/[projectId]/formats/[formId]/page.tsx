@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { useGetForm, useGetPublishedForm } from "@/packages/forms/api";
 import { CatalogUsage } from "@/packages/forms/components/catalog-usage";
 import { EntriesTable } from "@/packages/forms/components/entries-table";
+import { FormTabs } from "@/packages/forms/components/form-tabs";
 import { FormSummary } from "@/packages/forms/components/form-summary";
 import { ListEmpty } from "@/packages/forms/components/list-empty";
 import { ResponsesTable } from "@/packages/forms/components/responses-table";
@@ -51,20 +52,11 @@ export default function FormResponsesPage() {
   const canAddNow = !!form && isCatalog && isPublished && form.canEditEntries;
   const canEditForm = !!form && form.canEdit && form.status !== "archived";
   // Quien sólo diligencia ve las suyas; un listado pide ver o gestionar.
-  const canList = !!form && (form.canViewAll || (!isCatalog && can(["fillForms"])));
+  const canList =
+    !!form && (form.canViewAll || (!isCatalog && can(["fillForms"])));
 
   const actions = form ? (
     <>
-      {canEditForm ? (
-        <Button size="sm" variant="outline" asChild>
-          <Link href={formRoutes.edit(projectId, formId)}>
-            <Pencil />
-            <span className="sr-only sm:not-sr-only">
-              {isCatalog ? "Editar listado" : "Editar formato"}
-            </span>
-          </Link>
-        </Button>
-      ) : null}
       {canFillNow ? (
         <Button size="sm" asChild>
           <Link href={formRoutes.fill(projectId, formId)}>
@@ -180,6 +172,14 @@ export default function FormResponsesPage() {
         }
         actions={actions}
       />
+      {form ? (
+        <FormTabs
+          formId={formId}
+          active="responses"
+          form={form}
+          canList={canList}
+        />
+      ) : null}
       <PageMain
         variant="listado"
         isLoading={isLoading}

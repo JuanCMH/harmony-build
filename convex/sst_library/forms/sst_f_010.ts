@@ -136,7 +136,7 @@ export const SST_F_010: LibraryForm = {
   description:
     "La inspección que hace el conductor antes de salir: una por vehículo y por día. Para volqueta o mezcladora, con once posiciones de llanta.",
   sections: sections(
-    section("identificacion", "Vehículo y conductor", [
+    section("inspeccion", "Inspección", [
       reference(
         "Vehículo",
         CATALOG.vehicles,
@@ -183,8 +183,6 @@ export const SST_F_010: LibraryForm = {
         id: "pago-seguridad-social",
         description: "Fecha del último pago de la planilla del conductor",
       }),
-    ]),
-    section("inspeccion", "Inspección", [
       checklist(
         "Estado del vehículo",
         { scale: SCALE_BMNA, blocks },
@@ -203,7 +201,7 @@ export const SST_F_010: LibraryForm = {
         id: "extintor-capacidad",
         size: "medium",
       }),
+      ...closing("Firma del conductor"),
     ]),
-    closing("Firma del conductor"),
   ),
 };

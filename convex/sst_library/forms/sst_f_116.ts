@@ -101,15 +101,13 @@ export const SST_F_116: LibraryForm = {
   description:
     "La inspección de la planta de concreto antes de operarla: motor, banda transportadora, instalación eléctrica, básculas y operador. Una por día.",
   sections: sections(
-    section("identificacion", "Planta y operador", [
-      equipment("Planta de concreto"),
+    section("inspeccion", "Inspección", [
+      equipment("Planta de concreto", { size: "full" }),
       workCenter(),
       person("Operador", ["cedula"], {
         id: "persona-operador",
         showInTable: true,
       }),
-    ]),
-    section("inspeccion", "Inspección", [
       checklist(
         "Estado de la planta",
         { scale: SCALE_SNNA, blocks },
@@ -119,7 +117,7 @@ export const SST_F_116: LibraryForm = {
             "Los ítems que se hacen «cada semana» se responden N.A los días en que no corresponden.",
         },
       ),
+      ...closing("Firma del operador"),
     ]),
-    closing("Firma del operador"),
   ),
 };
