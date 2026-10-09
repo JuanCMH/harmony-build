@@ -28,7 +28,7 @@ export const AuthScreen = () => {
             <p className="text-sm text-muted-foreground/80 text-center mb-3">
               {state === "signIn"
                 ? "Inicia sesión con tu correo o con Google."
-                : "Crea tu cuenta y empieza a digitalizar los formatos de tu obra."}
+                : "Crea tu cuenta con tu correo o con Google."}
             </p>
           ) : null}
           <Tabs
@@ -103,29 +103,6 @@ function AuthBrandPanel() {
       >
         Harmony Build
       </motion.p>
-      <motion.p
-        className="relative z-10 mt-2.5 text-sm text-white/40 font-poppins"
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.7, delay: 0.6 }}
-      >
-        Del papel de la obra al dato que decide
-      </motion.p>
-
-      {/* Bottom quote */}
-      <motion.div
-        className="absolute bottom-12 left-12 right-12 z-10"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, delay: 0.8 }}
-      >
-        <div className="backdrop-blur-lg bg-white/[0.04] border border-white/[0.06] rounded-xl px-6 py-5">
-          <p className="text-sm font-light leading-relaxed text-white/50 font-poppins">
-            Cada formato que hoy se llena a mano en la obra, convertido en un
-            registro que se consulta, se compara y se audita.
-          </p>
-        </div>
-      </motion.div>
     </div>
   );
 }

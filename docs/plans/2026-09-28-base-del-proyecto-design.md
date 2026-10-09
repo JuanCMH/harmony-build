@@ -135,8 +135,9 @@ tomó por omisión.
 3. **¿El código de unión caduca?** Hoy no. Concede sólo lectura, pero de todo
    el proyecto.
 4. **Los textos de marca de la pantalla de acceso** («Del papel de la obra al
-   dato que decide» y el aviso al pie) son provisionales: los escribió quien
-   construyó la pantalla y nadie de producto los ha aprobado.
+   dato que decide» y el aviso al pie) eran provisionales. **Resuelto el
+   2026-10-09:** se quitaron el lema y la cita; la pantalla sólo lleva el
+   nombre.
 5. **El logotipo es el de Harmony** con otro texto. Falta decidir si Harmony
    Build tiene isotipo propio.
 6. **El remitente del correo** es `harmony@n3xus.cloud`, el mismo dominio de

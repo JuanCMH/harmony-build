@@ -27,7 +27,7 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 const DESCRIPTION =
-  "Harmony Build es la plataforma para digitalizar los formatos de obra de las empresas de construcción: del papel de la obra al dato que decide.";
+  "Harmony Build es la plataforma para digitalizar los formatos de obra de las empresas de construcción.";
 
 export const metadata: Metadata = {
   title: {
