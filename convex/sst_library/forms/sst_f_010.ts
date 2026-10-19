@@ -173,15 +173,14 @@ export const SST_F_010: LibraryForm = {
       workCenter({ fill: ["ciudad"] }),
       number("Kilometraje u horómetro", {
         id: "kilometraje",
+        // Comparte fila con el centro de trabajo desde que salió el último
+        // pago de seguridad social, que el cliente pidió quitar.
+        size: "medium",
         required: true,
         showInTable: true,
         description:
           "Lectura del odómetro (km) o del horómetro (horas) al iniciar la jornada",
         placeholder: "ej: 45.230",
-      }),
-      date("Último pago de seguridad social", {
-        id: "pago-seguridad-social",
-        description: "Fecha del último pago de la planilla del conductor",
       }),
       checklist(
         "Estado del vehículo",
