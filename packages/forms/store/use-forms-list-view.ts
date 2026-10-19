@@ -13,13 +13,14 @@ import {
  * «los listados archivados de SST» reproduce esa pantalla (`02 §8`). Los
  * parámetros van en español, como lo que ve el usuario en la barra.
  */
-export const FORM_CLASSES = ["formatos", "listados"] as const;
+export const FORM_CLASSES = ["formatos", "listados", "seguimientos"] as const;
 
 export type FormClass = (typeof FORM_CLASSES)[number];
 
 export const KIND_BY_CLASS: Record<FormClass, FormKind> = {
   formatos: "record",
   listados: "catalog",
+  seguimientos: "tracking",
 };
 
 export const useFormsListView = () =>

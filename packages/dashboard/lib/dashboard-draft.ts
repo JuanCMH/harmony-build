@@ -1,6 +1,9 @@
 import type { Id } from "@/convex/_generated/dataModel";
 import type { ResultType } from "@/convex/lib/result_types";
-import type { WidgetSize } from "@/convex/lib/result_validators";
+import type {
+  WidgetHeight,
+  WidgetSize,
+} from "@/convex/lib/result_validators";
 
 /**
  * El tablero mientras se edita: sus pestañas y los resultados de cada una, y
@@ -12,6 +15,7 @@ export interface DraftWidget {
   id: string;
   resultId: Id<"formResults">;
   size: WidgetSize;
+  height: WidgetHeight;
   /** Lo que hace falta para pintarlo mientras se edita: su nombre, su tipo
    *  y el formato del que sale. */
   name: string;
@@ -33,27 +37,10 @@ export const SIZE_LABEL: Record<WidgetSize, string> = {
   full: "Fila entera",
 };
 
-/** Lo que ocupa cada tamaño en la retícula de doce del tablero. En teléfono
- *  y tableta todo va a fila entera. */
-export const SIZE_SPAN: Record<WidgetSize, string> = {
-  third: "lg:col-span-4",
-  half: "lg:col-span-6",
-  twoThirds: "lg:col-span-8",
-  full: "lg:col-span-12",
-};
-
-/** El tamaño con que nace un resultado en el tablero: una cifra cabe en un
- *  tercio; una tabla o un mapa de calor piden la fila. */
-export const DEFAULT_SIZE: Record<ResultType, WidgetSize> = {
-  indicator: "third",
-  trend: "twoThirds",
-  distribution: "half",
-  compliance: "twoThirds",
-  findings: "half",
-  expirations: "half",
-  table: "full",
-  heatmap: "full",
-  composite: "third",
+export const HEIGHT_LABEL: Record<WidgetHeight, string> = {
+  short: "Bajo",
+  medium: "Medio",
+  tall: "Alto",
 };
 
 const replaceTab = (
@@ -119,16 +106,17 @@ export const removeWidget = (
     widgets: tab.widgets.filter((widget) => widget.id !== widgetId),
   }));
 
+/** Cambia el ancho, el alto o los dos. */
 export const resizeWidget = (
   tabs: readonly DraftTab[],
   tabId: string,
   widgetId: string,
-  size: WidgetSize,
+  change: { size?: WidgetSize; height?: WidgetHeight },
 ): DraftTab[] =>
   replaceTab(tabs, tabId, (tab) => ({
     ...tab,
     widgets: tab.widgets.map((widget) =>
-      widget.id === widgetId ? { ...widget, size } : widget,
+      widget.id === widgetId ? { ...widget, ...change } : widget,
     ),
   }));
 
@@ -161,11 +149,12 @@ export const dashboardPayload = (tabs: readonly DraftTab[]) =>
   tabs.map((tab) => ({
     id: tab.id,
     label: tab.label.trim(),
-    widgets: tab.widgets.map(({ id, resultId, size }) => ({
+    widgets: tab.widgets.map(({ id, resultId, size, height }) => ({
       id,
       resultId,
       size,
+      height,
     })),
   }));
 
-export const DASHBOARD_ROOM = { tabs: 8, widgetsPerTab: 12 } as const;
+export const DASHBOARD_ROOM = { tabs: 20, widgetsPerTab: 12 } as const;

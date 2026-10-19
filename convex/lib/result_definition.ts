@@ -17,6 +17,7 @@ import {
   type Measure,
   type MeasureTerm,
   RESULT_LIMITS,
+  WEEKDAYS,
   type ResultConfig,
   type ResultGoal,
   type ResultType,
@@ -47,19 +48,25 @@ export const dateFields = (fields: readonly FormField[]): FormField[] =>
 /** Los tipos de resultado que caben en una clase de formato: los
  *  vencimientos son de un listado; todo lo demás, de las respuestas de un
  *  formato. */
-export const resultTypesFor = (kind: FormKind): ResultType[] =>
-  kind === "catalog"
-    ? ["expirations"]
-    : [
-        "indicator",
-        "trend",
-        "distribution",
-        "table",
-        "compliance",
-        "findings",
-        "heatmap",
-        "composite",
-      ];
+export const resultTypesFor = (kind: FormKind): ResultType[] => {
+  if (kind === "catalog") return ["expirations"];
+  // De un seguimiento se mira si se cierra lo que se abre, y lo que se puede
+  // contar o repartir de sus asuntos.
+  if (kind === "tracking") {
+    return ["tracking", "indicator", "trend", "distribution", "table"];
+  }
+  return [
+    "indicator",
+    "trend",
+    "distribution",
+    "table",
+    "compliance",
+    "findings",
+    "heatmap",
+    "coverage",
+    "composite",
+  ];
+};
 
 export const RESULT_PROBLEMS = {
   invalidName: `El nombre debe tener entre 2 y ${RESULT_LIMITS.maxNameLength} caracteres`,
@@ -79,6 +86,7 @@ export const RESULT_PROBLEMS = {
   filterField: "Una condición apunta a un campo que el formato no tiene",
   filterValue: "Hay una condición sin valor con que comparar",
   goal: "La meta debe ser un número",
+  weekdays: "Elige al menos un día de la semana, sin repetir",
   compositeResults: `Elige entre 1 y ${RESULT_LIMITS.maxCompositeResults} indicadores`,
   compositeMissing:
     "Esta cifra usa un indicador que ya no existe. Edítala para elegir otro",
@@ -280,6 +288,23 @@ export function resultProblem(
       return has(checklistFields(fields), config.valueFieldId)
         ? null
         : RESULT_PROBLEMS.checklistField;
+    case "coverage": {
+      if (!has(referenceFields(fields), config.byFieldId)) {
+        return RESULT_PROBLEMS.referenceField;
+      }
+      const days = config.weekdays;
+      if (
+        days !== undefined &&
+        (days.length === 0 ||
+          new Set(days).size !== days.length ||
+          !days.every((day) => (WEEKDAYS as readonly number[]).includes(day)))
+      ) {
+        return RESULT_PROBLEMS.weekdays;
+      }
+      return goalProblem(config.goal);
+    }
+    case "tracking":
+      return goalProblem(config.goal);
     case "expirations": {
       const ids = config.dateFieldIds;
       const valid =

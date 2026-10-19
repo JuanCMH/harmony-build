@@ -16,8 +16,11 @@
 /** `record` es lo que la obra **hace** —una inspección, una entrega—: sus
  *  respuestas no se editan. `catalog` es lo que la obra **tiene** —equipos,
  *  vehículos—: sus elementos se mantienen al día y otros formatos los eligen
- *  (diseño §1). */
-export const FORM_KINDS = ["record", "catalog"] as const;
+ *  (diseño §1). `tracking` es lo que la empresa **debe resolver** —una acción
+ *  correctiva, un reporte de condición insegura—: un asunto que se abre,
+ *  avanza por etapas y se cierra
+ *  (`docs/plans/2026-10-10-seguimiento-de-hallazgos-design.md`). */
+export const FORM_KINDS = ["record", "catalog", "tracking"] as const;
 export type FormKind = (typeof FORM_KINDS)[number];
 
 export const FORM_STATUSES = ["draft", "published", "archived"] as const;
@@ -27,7 +30,15 @@ export type FormStatus = (typeof FORM_STATUSES)[number];
 export const FORM_AUDIENCES = ["all", "roles"] as const;
 export type FormAudience = (typeof FORM_AUDIENCES)[number];
 
-export const RESPONSE_STATUSES = ["submitted", "voided"] as const;
+/** `submitted` y `voided` son de una respuesta y de un elemento. Un asunto de
+ *  seguimiento está `open` hasta que se completa su última etapa, y entonces
+ *  `closed`; anulado, también es `voided`. */
+export const RESPONSE_STATUSES = [
+  "submitted",
+  "voided",
+  "open",
+  "closed",
+] as const;
 export type ResponseStatus = (typeof RESPONSE_STATUSES)[number];
 
 /* ───────────────────────────── Tipos de campo ───────────────────────────── */
@@ -60,7 +71,7 @@ export type FieldType = (typeof FIELD_TYPES)[number];
  *  dos. */
 export const FIELD_TYPE_KINDS: Partial<Record<FieldType, readonly FormKind[]>> =
   {
-    signature: ["record"],
+    signature: ["record", "tracking"],
   };
 
 /** Los tipos de campo que admite un formato de esta clase, en el orden de la

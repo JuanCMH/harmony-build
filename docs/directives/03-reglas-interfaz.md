@@ -172,6 +172,7 @@ pesadas.
 | **Separadores entre filas** | `divide-y divide-border/60`, nunca un borde por fila |
 | **Contenedor de icono** | `size-10 rounded-xl border` + par tonal (§1.4) |
 | **Cabecera de `PanelCard`** | La tarjeta de un panel es densa: icono en `size-9` con glifo `size-4`, y título `text-sm font-medium tracking-tight`. Es lo que pinta `components/harmony/panel-card.tsx`; no se escribe a mano. |
+| **Cabecera de `WidgetCard`** | La tarjeta de un resultado: sin contenedor de icono ni separador. Título `text-sm font-medium tracking-tight` en hasta dos líneas y, debajo, de dónde sale en `text-xs` con el glifo de su tipo en `size-3.5`; `p-4` a los cuatro lados. Es lo que pinta `components/harmony/widget-card.tsx`. |
 
 **Cuándo una caja se gana su sitio.** Se encajona lo **finito** —los cuatro
 métodos de notificación, los estados de un flujo— y se deja a sangre lo que
@@ -199,6 +200,29 @@ panel: cada copia acaba con su propio `gap` y su propia capitalización, y dos
 paneles que se parecen dejan de ser iguales. **Una tarjeta no brilla, no sigue
 al ratón y no se desenfoca**: ninguno de esos efectos es de la referencia, y en
 tema claro sólo añaden ruido al borde.
+
+**La tarjeta de un resultado es `WidgetCard`**
+(`components/harmony/widget-card.tsx`), en el tablero y en la página de
+resultados de un formato. A diferencia de `PanelCard`, es de **alto fijo**: lo
+pone la retícula de resultados y el contenido se adapta a él
+(`docs/plans/2026-10-14-tablero-a-la-medida-design.md`). Sus reglas:
+
+- **La retícula es de pisos.** Doce columnas y filas de 136 px con 16 de
+  separación (`packages/forms/lib/widget-grid.ts`). Un resultado ocupa uno de
+  cuatro anchos —tercio, media, dos tercios, fila entera— y uno de tres altos
+  —bajo, dos pisos (288 px); medio, tres (440 px); alto, cuatro (592 px)—. Un
+  alto mide lo mismo que dos bajos apilados. Ningún otro alto.
+- **El contenido se adapta, nunca al revés.** Cada tipo dice qué enseña en
+  cada alto (`ResultView`). Una gráfica toma el alto que le sobra; una lista
+  enseña las filas enteras que caben, medidas en la tarjeta
+  (`ResultFitList`, `useFitRows`), y debajo dice cuántas quedaron fuera.
+- **Sin scroll dentro y sin filas cortadas.** Es la excepción a la tabla con
+  techo de §2.3: dentro de un widget no hay `max-h` ni desplazamiento.
+- **Las filas de una lista tienen un solo molde y un alto fijo**: el texto en
+  una línea con puntos suspensivos y la etiqueta de estado a la derecha, nunca
+  debajo.
+- **Un periodo cortado se dice.** En una gráfica en el tiempo, el periodo que
+  el rango no cubre entero va punteado, y su ayuda lo nombra.
 
 ### 1.4 Color
 
@@ -277,6 +301,9 @@ y respuestas, `packages/forms/lib/checklist-styles.ts` para la lista de chequeo.
 | Respuesta enviada | `formResponses.status === "submitted"` | — | Sin insignia: es lo normal |
 | Respuesta anulada | `formResponses.status === "voided"` | red | «Anulada», la fila atenuada y el motivo a la vista |
 | Elemento inactivo | `formResponses.active === false` | gray | «Inactivo» |
+| Asunto abierto · vencido · cerrado · anulado | `formResponses.status` (`open`, `closed`, `voided`); «vencido» es `open` con la fecha de compromiso pasada, y no se guarda | yellow · red · green · red | «Abierto», «Vencido», «Cerrado», «Anulado» (`trackingStatusBadge`, `packages/forms/lib/status.ts`) |
+| Respuesta importada | `formResponses.importId` | — | Sin insignia: «Importada» en el sitio de la hora, y el aviso en su cabecera |
+| Importación sin terminar · deshecha | `formImports.status` (`running` · `reverted`) | yellow · gray | «Sin terminar», «Deshecha»; terminada va sin insignia (`packages/forms/lib/import-history.ts`) |
 | Ítem conforme · no conforme · no aplica | `ChecklistOption.meaning` | green · red · gray | Siempre con la letra o el nombre de la opción |
 | Fecha vencida o que vence hoy · por vencer · vigente | Los días que faltan para una fecha de un elemento, en un resultado de vencimientos (`ExpirationRow.daysLeft`: negativo o cero · hasta 30 · más) | red · yellow · green | «Venció hace 3 días», «Vence hoy», «Vence en 12 días», «Vigente» (`packages/forms/components/result-tables.tsx`) |
 
@@ -448,12 +475,33 @@ entidad por fila, que se abre —roles, miembros—.
   `tabular-nums` alineado a la derecha, no como `Badge`: siete pastillas grises
   idénticas no informan de nada.
 
+**Tabla o filas se decide por el espacio del listado, no por la ventana.** El
+menú lateral aparece justo en `md` y le quita 256px al contenido: a 768px de
+ventana quedan unos 490. Por eso el listado se declara `@container` y sus cortes
+son de contenedor (`@2xl:block` / `@2xl:hidden`, `@md:flex-row`), nunca `md:`,
+`lg:` ni `sm:`. Lo mismo vale para su barra de búsqueda y filtros, que además
+envuelve (`flex-wrap`) en vez de empujar el último control fuera del borde.
+
+- **La columna principal nunca se queda con «lo que sobre».** En una tabla
+  `table-fixed`, cada columna de ancho fijo resta a la del nombre, y con
+  bastantes llega a cero. La columna que no cabe se oculta con un corte de
+  contenedor (`hidden @4xl:table-cell`) y su dato pasa a la segunda línea del
+  nombre, donde sigue visible.
+- **El corte se elige sumando los anchos fijos**: el listado pasa a tabla
+  cuando la columna principal conserva al menos unos 200px.
+- **Una tabla que aun así desborda lo dice.** `Table` difumina el borde por
+  donde queda contenido (`data-more-end` / `data-more-start`); no se le quita.
+- **Las migas colapsan por su espacio** (`ResponsiveBreadcrumb` es
+  `@container`): en una tableta con acciones en la cabecera, las migas
+  completas quedaban en «Pis… › F… › Ins…».
+
 **Una tabla dentro de una tarjeta lleva techo; una tabla que es la pantalla, no.**
 
 | Dónde vive | Altura | Por qué |
 |---|---|---|
 | **Es la pantalla** (variante `listado`) | ninguna: crece y desplaza la página | no hay nada debajo a lo que tapar |
 | **Es una tarjeta** (`PanelCard` dentro de una variante `compuesta`) | `max-h-*` y scroll dentro | si no, acapara la altura y empuja a sus hermanas fuera de la vista |
+| **Es un resultado** (`WidgetCard` en la retícula de resultados) | la de su alto, fijo; las filas que caben y «y N más» | el alto es de la retícula, no del contenido: con scroll, la rueda del ratón se queda en la tarjeta y la última fila sale cortada (§1.3) |
 
 **`max-h`, nunca `h`.** Una altura fija reserva su hueco aunque sobren filas;
 un máximo se encoge con pocas y desplaza con muchas.
@@ -470,6 +518,9 @@ un máximo se encoge con pocas y desplaza con muchas.
 >
 > El mismo síntoma en una retícula se corrige con `items-start`: sin él, cada
 > columna se estira a la altura de la fila y toda tarjeta `h-full` la llena.
+> La retícula de resultados no: ahí el alto no lo pone el contenido sino el
+> tamaño del resultado (§1.3), y todas las tarjetas de una fila terminan en la
+> misma línea porque nacen de la misma escala.
 
 **El conteo va junto al título, nunca en la zona de acciones.** «Roles 7», el
 número en `text-muted-foreground` y sin caja. La derecha de la cabecera es donde
@@ -626,6 +677,13 @@ fila se desplaza y la pestaña activa se trae a la vista al montarse. No se
 envuelve con `flex-wrap` (la barra tiene alto fijo) ni se parchea el padding en
 el consumidor. Entre la barra de pestañas y su contenido, `mt-3`.
 
+**La excepción son las pestañas del tablero**, que las crea quien lo arma y
+pueden ser veinte: no se desplazan. Desde `sm` se pintan las que caben y el
+resto va en un botón «Más», que toma el nombre de la pestaña activa cuando
+ésta es una de las guardadas; en teléfono son un solo `Select`
+(`packages/dashboard/components/dashboard-tabs.tsx`). Una barra de pestañas
+fijas y pocas —las de un sheet, las de un formato— sigue la regla de arriba.
+
 ### 3.3 useConfirm (confirmaciones)
 
 Toda confirmación sí/no usa `hooks/use-confirm.tsx`. **Nunca** montes un
@@ -738,6 +796,8 @@ Tamaños: `size-4` en botones y filas densas, `size-5` dentro de contenedores
 | Respuesta | `ClipboardPen` |
 | Elemento de un listado | `Box` |
 | Categoría de formatos | `Tag` |
+| Seguimiento | `Milestone` |
+| Asunto de un seguimiento | `Flag` |
 | Tablero | `LayoutDashboard` |
 
 > **Por qué `HardHat` y no `Building2`**: el casco nombra la obra, que es lo que
@@ -759,7 +819,8 @@ previsualizar · `EyeOff` ocultar · `LogIn` entrar o unirse · `LogOut` salir �
 seleccionar todo, y «Todo conforme» en un bloque de una lista de chequeo ·
 `PenLine` diligenciar · `Rocket` publicar · `Undo2` descartar un borrador ·
 `CopyPlus` duplicar · `Archive` archivar · `Ban` anular una respuesta ·
-`Eraser` borrar una firma.
+`Eraser` borrar una firma · `FileUp` importar desde un archivo · `FileClock`
+las importaciones hechas. `Undo2` es también deshacer una importación.
 
 `Settings` no está en esta lista: es la entrada «Ajustes» de §5.2.
 
@@ -805,7 +866,7 @@ una fecha · `Cake` años desde una fecha · `CalendarPlus` fecha más un plazo 
 
 ### 5.6 Tipos de resultado
 
-Los nueve tipos de `convex/lib/result_types.ts`, con el glifo de
+Los once tipos de `convex/lib/result_types.ts`, con el glifo de
 `packages/forms/lib/result-catalog.ts`, que es el único módulo donde viven. Es
 la cabecera de la tarjeta de un resultado (`PanelCard`), en la pantalla del
 formato y en el tablero:
@@ -813,7 +874,14 @@ formato y en el tablero:
 `Gauge` indicador · `ChartLine` tendencia · `ChartColumn` distribución ·
 `Table2` tabla · `ClipboardCheck` cumplimiento · `TriangleAlert` hallazgos
 frecuentes · `Grid3x3` mapa de calor · `CalendarClock` vencimientos ·
-`Calculator` cifra compuesta.
+`Calculator` cifra compuesta · `Target` programa · `CircleCheckBig`
+seguimiento.
+
+En un programa, la barra de cada elemento es una magnitud —cuántas veces se
+hizo de las que tocaba— y va en el acento; lo que sí es un estado, y va en
+rojo con su texto, es que un elemento no tenga ninguna respuesta. En un
+seguimiento, cada asunto abierto dice su plazo con los colores de §1.4:
+vencido en rojo, por vencer en amarillo.
 
 La meta de una cifra se dice con los glifos de estado de §5.4:
 `CheckCircle2` cumple y `XCircle` no cumple, siempre con su texto.

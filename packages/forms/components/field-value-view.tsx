@@ -12,9 +12,10 @@ import {
 } from "@/convex/lib/stored_values";
 import { isEmail, isPhone, isUrl } from "@/convex/lib/value_validation";
 
+import { isImportExempt } from "@/convex/lib/import_types";
 import type { ValueViewContext } from "../lib/response-reading";
 import { ChecklistFieldView } from "./checklist-field-view";
-import { EmptyValue } from "./empty-value";
+import { EmptyValue, UnavailableValue } from "./empty-value";
 import { FileValueView } from "./file-value-view";
 import { ReferenceValueView } from "./reference-value-view";
 import { SignatureValueView } from "./signature-value-view";
@@ -44,7 +45,13 @@ export const FieldValueView = ({
   value,
   context,
 }: FieldValueViewProps) => {
-  if (isEmptyValue(field, value)) return <EmptyValue />;
+  if (isEmptyValue(field, value)) {
+    return context.imported && isImportExempt(field) ? (
+      <UnavailableValue />
+    ) : (
+      <EmptyValue />
+    );
+  }
 
   switch (field.type) {
     case "checklist":

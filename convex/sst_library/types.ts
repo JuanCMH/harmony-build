@@ -25,8 +25,15 @@ export interface LibraryForm {
   /** El nombre de la categoría; se crea en el proyecto si no existe. */
   category: string;
   description?: string;
-  /** Sólo en listados: el campo que titula cada elemento. */
+  /** En un listado, el campo que titula cada elemento; en un seguimiento, el
+   *  que titula cada asunto. */
   titleFieldId?: string;
+  /** Sólo en un seguimiento: cómo se sigue cada asunto. */
+  tracking?: {
+    dueDateFieldId?: string;
+    responsibleFieldId?: string;
+    numberPrefix?: string;
+  };
   sections: FormSection[];
   /** Sólo en listados, y sólo se instalan si se piden: elementos **ficticios**
    *  para poder probar los formatos que los relacionan. */

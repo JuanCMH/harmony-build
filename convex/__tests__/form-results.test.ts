@@ -432,6 +432,8 @@ describe("dashboards", () => {
           {
             id: "w1",
             size: "half",
+            // Sin alto guardado, el del tipo: una cifra va en dos pisos.
+            height: "short",
             resultId,
             name: "Horas",
             type: "indicator",
@@ -441,6 +443,37 @@ describe("dashboards", () => {
         ],
       },
     ]);
+  });
+
+  it("guarda el alto de cada resultado, y no uno que su tipo no admite", async () => {
+    const resultId = await t.mutation(api.formResults.create, {
+      formId,
+      name: "Horas",
+      config: SUM,
+    });
+    const withHeight = (height: "short" | "medium" | "tall") => [
+      {
+        id: "general",
+        label: "General",
+        widgets: [{ id: "w1", resultId, size: "third" as const, height }],
+      },
+    ];
+    await t.mutation(api.dashboards.save, {
+      projectId: s.projectId,
+      tabs: withHeight("medium"),
+    });
+    const dashboard = await t.query(api.dashboards.get, {
+      projectId: s.projectId,
+    });
+    expect(dashboard?.tabs[0]?.widgets[0]).toMatchObject({ height: "medium" });
+
+    // Una cifra no se estira a cuatro pisos.
+    await expect(
+      t.mutation(api.dashboards.save, {
+        projectId: s.projectId,
+        tabs: withHeight("tall"),
+      }),
+    ).rejects.toThrow(dashboardsErrors.invalidHeight);
   });
 
   it("lo ve quien ve las respuestas y lo arma quien edita el proyecto", async () => {
@@ -577,6 +610,7 @@ describe("formLibrary.installSst: resultados y tablero", () => {
     });
     expect(first.results).toEqual({
       created: SST_RESULTS.length,
+      updated: 0,
       dashboard: true,
     });
 
@@ -593,6 +627,168 @@ describe("formLibrary.installSst: resultados y tablero", () => {
     const again = await t.mutation(internal.formLibrary.installSst, {
       projectId: s.projectId,
     });
-    expect(again.results).toEqual({ created: 0, dashboard: false });
+    expect(again.results).toEqual({
+      created: 0,
+      updated: 0,
+      dashboard: false,
+    });
+  });
+
+  it("sólo con `update` pone al día un resultado que cambió en la biblioteca", async () => {
+    await t.mutation(internal.formLibrary.installSst, {
+      projectId: s.projectId,
+    });
+    // Alguien —o una versión anterior de la biblioteca— lo dejó distinto.
+    const edited = await t.run(async (ctx) => {
+      const results = await ctx.db.query("formResults").collect();
+      const one = results.find((result) => result.config.type === "coverage");
+      if (one?.config.type !== "coverage") throw new Error("sin programa");
+      await ctx.db.patch(one._id, {
+        config: { ...one.config, scope: "seen", interval: "month" },
+      });
+      return one;
+    });
+
+    const plain = await t.mutation(internal.formLibrary.installSst, {
+      projectId: s.projectId,
+    });
+    expect(plain.results.updated).toBe(0);
+
+    const updated = await t.mutation(internal.formLibrary.installSst, {
+      projectId: s.projectId,
+      update: true,
+    });
+    expect(updated.results).toEqual({
+      created: 0,
+      updated: 1,
+      dashboard: false,
+    });
+    const after = await t.run((ctx) => ctx.db.get(edited._id));
+    expect(after?.config).toEqual(edited.config);
+  });
+
+  it("reconoce un resultado que la biblioteca renombró, y `update` le pone el nombre nuevo", async () => {
+    await t.mutation(internal.formLibrary.installSst, {
+      projectId: s.projectId,
+    });
+    const renamed = SST_RESULTS.find((one) => one.previousNames?.length);
+    if (!renamed?.previousNames) throw new Error("sin renombrados");
+    // Un proyecto instalado con la biblioteca de antes.
+    const old = await t.run(async (ctx) => {
+      const one = (await ctx.db.query("formResults").collect()).find(
+        (result) => result.name === renamed.name,
+      );
+      if (!one) throw new Error("sin resultado");
+      await ctx.db.patch(one._id, { name: renamed.previousNames?.[0] ?? "" });
+      return one._id;
+    });
+    const count = async () =>
+      (await t.run((ctx) => ctx.db.query("formResults").collect())).length;
+    const before = await count();
+
+    await t.mutation(internal.formLibrary.installSst, {
+      projectId: s.projectId,
+      update: true,
+    });
+    expect(await count()).toBe(before);
+    expect((await t.run((ctx) => ctx.db.get(old)))?.name).toBe(renamed.name);
+  });
+
+  it("sólo con `resetDashboard` sustituye un tablero que ya existe", async () => {
+    await t.mutation(internal.formLibrary.installSst, {
+      projectId: s.projectId,
+    });
+    await t.mutation(api.dashboards.save, {
+      projectId: s.projectId,
+      tabs: [{ id: "mia", label: "La mía", widgets: [] }],
+    });
+    const labels = async () =>
+      (
+        await t.query(api.dashboards.get, { projectId: s.projectId })
+      )?.tabs.map((tab) => tab.label);
+
+    await t.mutation(internal.formLibrary.installSst, {
+      projectId: s.projectId,
+      update: true,
+    });
+    expect(await labels()).toEqual(["La mía"]);
+
+    const reset = await t.mutation(internal.formLibrary.installSst, {
+      projectId: s.projectId,
+      resetDashboard: true,
+    });
+    expect(reset.results.dashboard).toBe(true);
+    expect(await labels()).toEqual(SST_DASHBOARD.map((tab) => tab.label));
+    await drainScheduled(t);
+  });
+});
+
+describe("formResults.compute: programa", () => {
+  it("espera a todos los elementos activos del listado, también al que nunca se inspeccionó", async () => {
+    await t.mutation(internal.formLibrary.installSst, {
+      projectId: s.projectId,
+      withSamples: true,
+    });
+    const { inspection, vehicles } = await t.run(async (ctx) => {
+      const forms = await ctx.db.query("forms").collect();
+      const inspection = forms.find((form) => form.code === "SST-F-010");
+      const catalog = forms.find(
+        (form) => form.kind === "catalog" && form.name === "Vehículos",
+      );
+      if (!inspection?.publishedVersionId || !catalog) throw new Error("sin");
+      const vehicles = await ctx.db
+        .query("formResponses")
+        .withIndex("formId", (q) => q.eq("formId", catalog._id))
+        .collect();
+      // Un vehículo inactivo no se espera.
+      await ctx.db.patch(vehicles[2]._id, { active: false });
+      // Dos días de inspección del mismo vehículo, escritos directos.
+      for (const date of ["2020-03-02", "2020-03-03"]) {
+        await ctx.db.insert("formResponses", {
+          formId: inspection._id,
+          projectId: s.projectId,
+          versionId: inspection.publishedVersionId,
+          date,
+          submittedBy: s.ownerId,
+          status: "submitted",
+          values: [
+            {
+              fieldId: "vehiculo",
+              value: {
+                kind: "reference",
+                responseId: vehicles[0]._id,
+                label: vehicles[0].title ?? "",
+                snapshot: [],
+              },
+            },
+          ],
+        });
+      }
+      return { inspection, vehicles };
+    });
+
+    const computed = await t.query(api.formResults.compute, {
+      formId: inspection._id,
+      // De lunes a miércoles: el miércoles nadie inspeccionó.
+      from: "2020-03-02",
+      to: "2020-03-04",
+      today: "2020-03-10",
+    });
+    const program = computed?.results.find(
+      (result) => result.config.type === "coverage",
+    );
+    expect(program?.problem).toBeNull();
+    if (program?.data.type !== "coverage") throw new Error("tipo");
+    const expected = vehicles.length - 1;
+    expect(program.data.elements).toBe(expected);
+    expect(program.data.missing).toBe(expected - 1);
+    expect(program.data.done).toBe(2);
+    expect(program.data.expected).toBe(expected * 3);
+    expect(program.data.rows.at(-1)).toMatchObject({
+      key: vehicles[0]._id,
+      done: 2,
+      expected: 3,
+      last: "2020-03-03",
+    });
   });
 });

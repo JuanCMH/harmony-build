@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { ENTITY_ICONS } from "../lib/field-catalog";
+import { KIND_TEXT } from "../lib/kind-text";
 import { formRoutes } from "../lib/routes";
 
 export type FormTab = "responses" | "results" | "design";
@@ -62,8 +63,14 @@ export const FormTabs = ({
         ? [
             {
               id: "responses" as const,
-              label: isCatalog ? "Elementos" : "Respuestas",
-              icon: ENTITY_ICONS[isCatalog ? "entry" : "response"],
+              label: KIND_TEXT[form.kind].itemsLabel,
+              icon: ENTITY_ICONS[
+                isCatalog
+                  ? "entry"
+                  : form.kind === "tracking"
+                    ? "issue"
+                    : "response"
+              ],
               href: formRoutes.responses(projectId, formId),
             },
           ]

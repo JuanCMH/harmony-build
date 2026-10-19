@@ -82,6 +82,17 @@ export function mayFill({ access }: FormViewer, form: Form): boolean {
 export const canFillForm = (viewer: FormViewer, form: Form): boolean =>
   isFillable(form) && mayFill(viewer, form);
 
+/** Un seguimiento admite asuntos nuevos si está publicado y sin archivar. */
+export const isTrackable = (form: Form): boolean =>
+  form.kind === "tracking" &&
+  form.status === "published" &&
+  form.publishedVersionId !== undefined;
+
+/** Si puede abrir un asunto, o completar la etapa que toca: tiene la llave de
+ *  diligenciar y está en la audiencia del seguimiento. */
+export const canOpenTracking = (viewer: FormViewer, form: Form): boolean =>
+  isTrackable(form) && mayFill(viewer, form);
+
 /** Si ve **todas** las respuestas del formato, o todos los elementos del
  *  listado. La audiencia no cuenta: restringe a quien diligencia, no a quien
  *  consulta. */
@@ -95,7 +106,7 @@ export function canSeeForm(viewer: FormViewer, form: Form): boolean {
   // Un borrador que nunca se publicó sólo existe para quien lo construye.
   if (form.status === "draft") return false;
   if (canViewAll(viewer, form)) return true;
-  return canFillForm(viewer, form);
+  return canFillForm(viewer, form) || canOpenTracking(viewer, form);
 }
 
 /** Si puede abrir esta respuesta: todas con la llave, o la suya. Quien perdió
@@ -107,7 +118,7 @@ export function canViewResponse(
 ): boolean {
   if (canViewAll(viewer, form)) return true;
   return (
-    form.kind === "record" &&
+    form.kind !== "catalog" &&
     response.submittedBy === viewer.userId &&
     viewer.access.can("fillForms")
   );
@@ -125,7 +136,9 @@ export const formPermissions = (viewer: FormViewer, form: Form) => ({
   canEdit: viewer.access.can("editForms"),
   canDelete: viewer.access.can("deleteForms"),
   canViewAll: canViewAll(viewer, form),
-  canVoid: form.kind === "record" && viewer.access.can("voidResponses"),
+  canVoid: form.kind !== "catalog" && viewer.access.can("voidResponses"),
+  /** Si puede abrir un asunto de este seguimiento ahora. */
+  canOpen: canOpenTracking(viewer, form),
   canEditEntries: canEditEntries(viewer, form),
 });
 

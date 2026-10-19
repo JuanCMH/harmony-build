@@ -17,6 +17,7 @@ const widget = (id: string) => ({
   id,
   resultId: `resultado-${id}` as Id<"formResults">,
   size: "half" as const,
+  height: "short" as const,
   name: `Resultado ${id}`,
   type: "indicator" as const,
   formId: "f1" as Id<"forms">,
@@ -43,10 +44,13 @@ describe("el tablero mientras se edita", () => {
     ).toEqual(["b", "a"]);
   });
 
-  it("cambia el tamaño de un resultado y lo quita", () => {
-    expect(resizeWidget(TABS, "t1", "a", "full")[0].widgets[0].size).toBe(
-      "full",
-    );
+  it("cambia el ancho y el alto de un resultado, y lo quita", () => {
+    expect(
+      resizeWidget(TABS, "t1", "a", { size: "full" })[0].widgets[0],
+    ).toMatchObject({ size: "full", height: "short" });
+    expect(
+      resizeWidget(TABS, "t1", "a", { height: "medium" })[0].widgets[0],
+    ).toMatchObject({ size: "half", height: "medium" });
     expect(
       removeWidget(TABS, "t1", "a")[0].widgets.map((one) => one.id),
     ).toEqual(["b"]);
@@ -65,8 +69,8 @@ describe("el tablero mientras se edita", () => {
       id: "t1",
       label: "Inspecciones",
       widgets: [
-        { id: "a", resultId: "resultado-a", size: "half" },
-        { id: "b", resultId: "resultado-b", size: "half" },
+        { id: "a", resultId: "resultado-a", size: "half", height: "short" },
+        { id: "b", resultId: "resultado-b", size: "half", height: "short" },
       ],
     });
   });

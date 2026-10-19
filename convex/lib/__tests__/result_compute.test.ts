@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { bucketsBetween, fitBucket } from "../date_buckets";
+import { sparkInterval } from "../result_compute";
 import type { ChecklistConfig, FormField, VisibilityRule } from "../form_types";
 import {
   type ComputedResponse,
@@ -134,6 +135,36 @@ describe("intervalos", () => {
     expect(fitBucket("day", "2026-01-01", "2026-12-31", 62)).toBe("week");
     expect(fitBucket("day", "2026-10-01", "2026-10-31", 62)).toBe("day");
   });
+
+  it("con menos de tres puntos se afina: treinta días no van por meses", () => {
+    expect(fitBucket("month", "2026-09-15", "2026-10-14", 62)).toBe("week");
+    expect(fitBucket("week", "2026-10-08", "2026-10-14", 62)).toBe("day");
+    expect(fitBucket("month", "2026-01-01", "2026-06-30", 62)).toBe("month");
+    // Un día no se afina más.
+    expect(fitBucket("day", "2026-10-14", "2026-10-14", 62)).toBe("day");
+  });
+
+  it("las mini columnas de un formato semanal van por semanas", () => {
+    const range = { from: "2026-09-15", to: "2026-10-14" };
+    const on = (...dates: string[]) =>
+      dates.map((date) => ({ date, values: {} }));
+    // Un informe de horas cada lunes: cuatro días en cinco semanas.
+    expect(
+      sparkInterval(
+        on("2026-09-21", "2026-09-28", "2026-10-05", "2026-10-12"),
+        range,
+      ),
+    ).toBe("week");
+    // Una inspección casi a diario.
+    expect(
+      sparkInterval(
+        on(...bucketsBetween("day", "2026-09-15", "2026-09-25")),
+        range,
+      ),
+    ).toBe("day");
+    // Sin respuestas no hay ritmo que seguir.
+    expect(sparkInterval([], range)).toBe("day");
+  });
 });
 
 describe("computeResult", () => {
@@ -227,11 +258,14 @@ describe("computeResult", () => {
   it("cumplimiento: conformes sobre respondidos; «no aplica» no cuenta", () => {
     const data = computeResult(
       { type: "compliance", checklistFieldId: "estado", interval: "week" },
-      input,
+      // Tres semanas: con una sola, la línea se afinaría a días.
+      { ...input, range: { from: "2026-09-14", to: "2026-10-04" } },
     );
     if (data.type !== "compliance") throw new Error("tipo");
     // 8 conformes y 3 no conformes; el «no aplica» queda fuera.
     expect(data.points).toEqual([
+      { key: "2026-09-14", ok: 0, fail: 0, percent: null },
+      { key: "2026-09-21", ok: 0, fail: 0, percent: null },
       { key: "2026-09-28", ok: 8, fail: 3, percent: (8 / 11) * 100 },
     ]);
     expect(data.responses).toBe(4);
@@ -400,13 +434,30 @@ describe("computeResult", () => {
         measure: { operation: "sum", fieldId: "horas" },
         series: [{ operation: "count" }],
       },
-      input,
+      { ...input, range: { from: "2026-09-14", to: "2026-10-04" } },
     );
     if (data.type !== "trend") throw new Error("tipo");
     expect(data.total).toBe(23);
     expect(data.extra).toEqual([
-      { points: [{ key: "2026-09-28", value: 4 }], total: 4 },
+      {
+        points: [
+          { key: "2026-09-14", value: 0 },
+          { key: "2026-09-21", value: 0 },
+          { key: "2026-09-28", value: 4 },
+        ],
+        total: 4,
+      },
     ]);
+  });
+
+  it("tendencia: una semana por semanas sería un punto, y se afina a días", () => {
+    const data = computeResult(
+      { type: "trend", interval: "week", measure: { operation: "count" } },
+      input,
+    );
+    if (data.type !== "trend") throw new Error("tipo");
+    expect(data.interval).toBe("day");
+    expect(data.points).toHaveLength(7);
   });
 
   it("cifra compuesta: una cuenta entre indicadores ya calculados", () => {

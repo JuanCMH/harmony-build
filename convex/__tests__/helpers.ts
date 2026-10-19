@@ -32,6 +32,7 @@ export const NO_PERMISSIONS = {
   viewResponses: false,
   voidResponses: false,
   editCatalogs: false,
+  importResponses: false,
 };
 
 export type PermissionKey = keyof typeof NO_PERMISSIONS;
@@ -155,7 +156,7 @@ export async function seedForm(
     projectId: Id<"projects">;
     createdBy: Id<"users">;
     sections: FormSection[];
-    kind?: "record" | "catalog";
+    kind?: "record" | "catalog" | "tracking";
     name?: string;
     code?: string;
     titleFieldId?: string;

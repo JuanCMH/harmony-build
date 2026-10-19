@@ -34,7 +34,11 @@ import { validateForm } from "./lib/form_validation";
 import { formAudience, formKind } from "./lib/form_validators";
 import { searchableText } from "./lib/text";
 
-const KIND_NOUN = { record: "Formato", catalog: "Listado" } as const;
+const KIND_NOUN = {
+  record: "Formato",
+  catalog: "Listado",
+  tracking: "Seguimiento",
+} as const;
 
 /** Cuántos formatos devuelve una búsqueda: lo que cabe en pantalla. */
 const SEARCH_LIMIT = 50;
@@ -186,7 +190,7 @@ export const setTitleField = mutation({
     const { form } = await requireForm(ctx, args.id, "editForms", formsErrors);
 
     requireNotArchived(form);
-    if (form.kind !== "catalog") throw new ConvexError(formsErrors.notCatalog);
+    if (form.kind === "record") throw new ConvexError(formsErrors.notCatalog);
 
     // El título tiene que valer en las dos versiones: en el borrador, que es
     // lo que se va a publicar, y en la publicada, que es con la que se
@@ -198,9 +202,13 @@ export const setTitleField = mutation({
     for (const version of [draft, published]) {
       if (!version) continue;
       const problem = validateForm(version.sections, {
-        kind: "catalog",
+        kind: form.kind,
         titleFieldId: args.titleFieldId,
-      }).find((candidate) => candidate.fieldId === args.titleFieldId);
+      }).find(
+        (candidate) =>
+          candidate.fieldId === args.titleFieldId &&
+          candidate.code.startsWith("titleField"),
+      );
       if (problem) throw new ConvexError(problem.message);
     }
 
@@ -216,7 +224,7 @@ export const setTitleField = mutation({
     }
 
     await ctx.runMutation(internal.logs.create, {
-      description: `Listado actualizado: ${form.name} (cambió el campo de título)`,
+      description: `${KIND_NOUN[form.kind]} actualizado: ${form.name} (cambió el campo de título)`,
       type: "update",
       projectId: form.projectId,
       affectedEntityType: "form",
@@ -324,6 +332,19 @@ export const remove = mutation({
       .withIndex("formId", (q) => q.eq("formId", args.id))
       .collect();
     for (const result of results) await ctx.db.delete(result._id);
+    // Ni el registro de sus importaciones: en un formato sin respuestas sólo
+    // pueden quedar las deshechas y las que no llegaron a escribir nada.
+    const imports = await ctx.db
+      .query("formImports")
+      .withIndex("formId", (q) => q.eq("formId", args.id))
+      .collect();
+    for (const record of imports) await ctx.db.delete(record._id);
+    // Ni resúmenes: sin respuestas no queda ninguno, salvo que algo fallara.
+    const digests = await ctx.db
+      .query("formDayDigests")
+      .withIndex("formId_date", (q) => q.eq("formId", args.id))
+      .take(50);
+    for (const digest of digests) await ctx.db.delete(digest._id);
     await ctx.db.delete(args.id);
 
     await ctx.runMutation(internal.logs.create, {
@@ -505,6 +526,10 @@ export const getById = query({
       categoryId: form.categoryId,
       categoryName: category?.name ?? null,
       titleFieldId: form.titleFieldId,
+      // Sólo en un seguimiento.
+      dueDateFieldId: form.dueDateFieldId,
+      responsibleFieldId: form.responsibleFieldId,
+      numberPrefix: form.numberPrefix,
       audience: form.audience,
       audienceRoleIds: form.audienceRoleIds,
       publishedVersionId: form.publishedVersionId ?? null,

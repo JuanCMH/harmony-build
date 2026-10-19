@@ -1,11 +1,12 @@
 "use client";
 
 import { Hint } from "@/components/harmony/hint";
-import { PanelCard } from "@/components/harmony/panel-card";
+import { WidgetCard } from "@/components/harmony/widget-card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Id } from "@/convex/_generated/dataModel";
-import type { ResultType } from "@/convex/lib/result_types";
+import type { ResultData, ResultType } from "@/convex/lib/result_types";
+import type { WidgetHeight } from "@/convex/lib/result_validators";
 import { useComputeFormResults } from "@/packages/forms/api";
 import { ResultCard } from "@/packages/forms/components/result-card";
 import { RESULT_CATALOG } from "@/packages/forms/lib/result-catalog";
@@ -14,6 +15,7 @@ import { formRoutes } from "@/packages/forms/lib/routes";
 import { useProjectId } from "@/packages/projects/store/use-project-id";
 import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 interface DashboardWidgetProps {
   widget: {
@@ -22,10 +24,15 @@ interface DashboardWidgetProps {
     type: ResultType;
     formId: Id<"forms">;
     formName: string;
+    height: WidgetHeight;
   };
   range: ResultsRange;
   today: string;
+  /** El sitio en la retícula: columnas y pisos. */
   className?: string;
+  /** Al editar el tablero, su menú ocupa el sitio de «Ver en el formato»:
+   *  la tarjeta conserva su alto, y lo que se ve al editar es lo que queda. */
+  editMenu?: (data: ResultData | undefined) => ReactNode;
 }
 
 /**
@@ -38,6 +45,7 @@ export const DashboardWidget = ({
   range,
   today,
   className,
+  editMenu,
 }: DashboardWidgetProps) => {
   const projectId = useProjectId();
   const { data } = useComputeFormResults({
@@ -49,32 +57,26 @@ export const DashboardWidget = ({
 
   if (!result) {
     return (
-      <PanelCard
+      <WidgetCard
         icon={RESULT_CATALOG[widget.type].icon}
         title={widget.name}
-        description={widget.formName}
+        caption={widget.formName}
         className={className}
-        contentClassName="p-4"
+        actions={editMenu?.(undefined)}
       >
         {data === undefined ? (
-          // Del alto de lo que viene: la tarjeta no salta al cargar.
-          <div className="space-y-3" aria-busy="true">
+          // Del alto de su tarjeta: no salta al cargar.
+          <div className="flex flex-1 flex-col gap-3" aria-busy="true">
             <span className="sr-only">Calculando…</span>
             <Skeleton className="h-8 w-28" />
-            <Skeleton
-              className={
-                widget.type === "trend" || widget.type === "compliance"
-                  ? "h-52 w-full"
-                  : "h-24 w-full"
-              }
-            />
+            <Skeleton className="w-full flex-1" />
           </div>
         ) : (
-          <p className="flex flex-1 items-center justify-center py-8 text-center text-sm text-muted-foreground">
+          <p className="flex flex-1 items-center justify-center text-center text-sm text-muted-foreground">
             No tienes acceso a las respuestas de este formato.
           </p>
         )}
-      </PanelCard>
+      </WidgetCard>
     );
   }
 
@@ -92,23 +94,30 @@ export const DashboardWidget = ({
       config={result.config}
       data={result.data}
       problem={result.problem}
+      today={today}
+      range={range}
+      height={widget.height}
       className={className}
       actions={
-        <Hint label="Ver en el formato" align="end">
-          <Button
-            variant="ghost"
-            size="iconSm"
-            className="text-muted-foreground"
-            asChild
-          >
-            <Link
-              href={formRoutes.results(projectId, widget.formId)}
-              aria-label={`Ver ${result.name} en su formato`}
+        editMenu ? (
+          editMenu(result.data)
+        ) : (
+          <Hint label="Ver en el formato" align="end">
+            <Button
+              variant="ghost"
+              size="iconSm"
+              className="text-muted-foreground"
+              asChild
             >
-              <ArrowUpRight />
-            </Link>
-          </Button>
-        </Hint>
+              <Link
+                href={formRoutes.results(projectId, widget.formId)}
+                aria-label={`Ver ${result.name} en su formato`}
+              >
+                <ArrowUpRight />
+              </Link>
+            </Button>
+          </Hint>
+        )
       }
     />
   );

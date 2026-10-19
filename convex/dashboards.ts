@@ -6,10 +6,12 @@ import { type QueryCtx, mutation, query } from "./_generated/server";
 import { dashboardsErrors } from "./lib/error_messages";
 import { dashboardTabs } from "./lib/result_validators";
 import { normalizeText } from "./lib/text";
+import { HEIGHTS_OF, heightOf } from "./lib/widget_layout";
 import { loadProjectAccess } from "./roles";
 
 export const DASHBOARD_LIMITS = {
-  maxTabs: 8,
+  // Las que no caben en la fila van en «Más»: el ancho ya no pone el tope.
+  maxTabs: 20,
   maxWidgets: 12,
   maxLabelLength: 40,
 } as const;
@@ -59,6 +61,7 @@ export const get = query({
               return {
                 id: widget.id,
                 size: widget.size,
+                height: heightOf(result.config.type, widget.height),
                 resultId: result._id,
                 name: result.name,
                 type: result.config.type,
@@ -121,6 +124,12 @@ export const save = mutation({
         const result = await ctx.db.get(widget.resultId);
         if (!result || result.projectId !== args.projectId) {
           throw new ConvexError(dashboardsErrors.resultNotFound);
+        }
+        if (
+          widget.height !== undefined &&
+          !HEIGHTS_OF[result.config.type].includes(widget.height)
+        ) {
+          throw new ConvexError(dashboardsErrors.invalidHeight);
         }
       }
       tabs.push({ ...tab, label });

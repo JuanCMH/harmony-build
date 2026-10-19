@@ -7,6 +7,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { DEFAULT_WIDGET } from "@/convex/lib/widget_layout";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useGetFormResults, useGetForms } from "@/packages/forms/api";
 import { newId } from "@/packages/forms/lib/new-id";
@@ -17,7 +18,7 @@ import { ArrowUpRight, Check, Plus } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
-import { DEFAULT_SIZE, type DraftWidget } from "../lib/dashboard-draft";
+import type { DraftWidget } from "../lib/dashboard-draft";
 
 interface AddWidgetPopoverProps {
   /** Los resultados que la pestaña ya tiene: se marcan, no se repiten. */
@@ -40,14 +41,17 @@ export const AddWidgetPopover = ({ taken, onAdd }: AddWidgetPopoverProps) => {
   const { data: catalogs } = useGetForms(
     open ? { projectId, kind: "catalog" } : "skip",
   );
+  const { data: trackings } = useGetForms(
+    open ? { projectId, kind: "tracking" } : "skip",
+  );
   const { data: results } = useGetFormResults(formId ? { formId } : "skip");
 
   const forms = useMemo(
     () =>
-      [...(records ?? []), ...(catalogs ?? [])].filter(
+      [...(records ?? []), ...(trackings ?? []), ...(catalogs ?? [])].filter(
         (form) => form.status === "published",
       ),
-    [records, catalogs],
+    [records, trackings, catalogs],
   );
   const form = forms.find((candidate) => candidate._id === formId);
 
@@ -56,7 +60,7 @@ export const AddWidgetPopover = ({ taken, onAdd }: AddWidgetPopoverProps) => {
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="flex min-h-40 w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed text-ui text-muted-foreground transition-colors hover:border-h-indigo/50 hover:bg-h-indigo/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 lg:col-span-4"
+          className="row-span-2 flex h-full w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed text-ui text-muted-foreground transition-colors hover:border-h-indigo/50 hover:bg-h-indigo/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 lg:col-span-4"
         >
           <span className="flex size-9 items-center justify-center rounded-xl border border-h-indigo/10 bg-h-indigo/10 text-h-indigo">
             <Plus className="size-4" />
@@ -110,7 +114,7 @@ export const AddWidgetPopover = ({ taken, onAdd }: AddWidgetPopoverProps) => {
                           onAdd({
                             id: newId(),
                             resultId: result._id,
-                            size: DEFAULT_SIZE[result.config.type],
+                            ...DEFAULT_WIDGET[result.config.type],
                             name: result.name,
                             type: result.config.type,
                             formId: form._id,

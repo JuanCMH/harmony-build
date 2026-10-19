@@ -446,10 +446,33 @@ export function validateForm(
 
   if (hasDependencyCycle(withSectionRules(ordered))) report("dependencyCycle");
 
-  if (options.kind === "catalog" && options.titleFieldId !== undefined) {
+  if (options.kind !== "record" && options.titleFieldId !== undefined) {
     report(validateTitleField(sections, options.titleFieldId), {
       fieldId: options.titleFieldId,
     });
+  }
+
+  // En un seguimiento cada sección es una **etapa**: se completa una vez, en
+  // orden. Por eso ninguna puede quedar oculta ni vacía, y el título tiene
+  // que escribirse al abrir.
+  if (options.kind === "tracking") {
+    for (const section of ordered) {
+      if ((section.visibility?.rules.length ?? 0) > 0) {
+        report("stageConditional", { sectionId: section.id });
+      }
+      if (section.fields.length === 0) {
+        report("stageEmpty", { sectionId: section.id });
+      }
+    }
+    if (
+      options.titleFieldId !== undefined &&
+      ordered.some((section) =>
+        section.fields.some((field) => field.id === options.titleFieldId),
+      ) &&
+      !ordered[0]?.fields.some((field) => field.id === options.titleFieldId)
+    ) {
+      report("titleFieldNotFirstStage", { fieldId: options.titleFieldId });
+    }
   }
 
   return problems;

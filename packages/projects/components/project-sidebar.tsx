@@ -52,6 +52,7 @@ export const ProjectSidebar = ({
   const { can, isLoading } = usePermissions();
   const canViewLogs = can(["viewLogs"]);
   const canSeeForms = can(FORMS_PERMISSIONS);
+  const canSeeTrackings = can(["viewResponses", "fillForms"]);
 
   const entries: SidebarMenuEntry[] = useMemo(() => {
     const base = `/projects/${projectId}`;
@@ -70,6 +71,17 @@ export const ProjectSidebar = ({
               hint: "Los formatos y los listados del proyecto",
               group: "operacion",
               href: formRoutes.list(projectId),
+            } satisfies SidebarMenuEntry,
+          ]
+        : []),
+      ...(canSeeTrackings
+        ? [
+            {
+              title: "Seguimientos",
+              icon: ENTITY_ICONS.tracking,
+              hint: "Lo que está abierto y hay que resolver",
+              group: "operacion",
+              href: formRoutes.trackings(projectId),
             } satisfies SidebarMenuEntry,
           ]
         : []),
@@ -92,7 +104,7 @@ export const ProjectSidebar = ({
         href: `${base}/ajustes`,
       },
     ];
-  }, [projectId, canViewLogs, canSeeForms]);
+  }, [projectId, canViewLogs, canSeeForms, canSeeTrackings]);
 
   return (
     <Sidebar variant="inset" collapsible="icon" {...props}>

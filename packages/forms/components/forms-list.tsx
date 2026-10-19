@@ -37,7 +37,11 @@ import {
   useRemoveForm,
   useUnarchiveForm,
 } from "../api";
-import { ENTITY_ICONS, FORM_ACTION_ICONS } from "../lib/field-catalog";
+import {
+  ENTITY_ICONS,
+  FORM_ACTION_ICONS,
+  KIND_ICON,
+} from "../lib/field-catalog";
 import {
   type FormRowActionKey,
   type FormViewerKeys,
@@ -46,6 +50,7 @@ import {
   formRowActions,
   primaryRowAction,
 } from "../lib/form-row-actions";
+import { KIND_TEXT } from "../lib/kind-text";
 import { formRoutes } from "../lib/routes";
 import {
   STATUS_TONE_CLASS,
@@ -67,6 +72,7 @@ type FormRow = NonNullable<ReturnType<typeof useGetForms>["data"]>[number];
 const CLASS_LABEL: Record<FormClass, string> = {
   formatos: "Formatos",
   listados: "Listados",
+  seguimientos: "Seguimientos",
 };
 
 /** «Todas» necesita un valor propio: la lista no elige el vacío. */
@@ -111,7 +117,7 @@ const ListLoading = () => (
           <Skeleton className="h-3.5 w-1/3" />
           <Skeleton className="h-3 w-1/5" />
         </div>
-        <Skeleton className="hidden h-5 w-24 md:block" />
+        <Skeleton className="hidden h-5 w-24 @2xl:block" />
         <Skeleton className="h-5 w-28" />
       </div>
     ))}
@@ -179,7 +185,7 @@ export const FormsList = () => {
   };
 
   const rows = forms ?? [];
-  const noun = kind === "record" ? "formato" : "listado";
+  const noun = KIND_TEXT[kind].one;
   const hasCategories = (categories?.length ?? 0) > 0;
   const isFiltering = search !== "" || category !== undefined;
 
@@ -210,7 +216,7 @@ export const FormsList = () => {
         {
           onSuccess: (id) => {
             toast.success(
-              `${kind === "record" ? "Formato" : "Listado"} duplicado correctamente`,
+              `${KIND_TEXT[kind].title} duplicado correctamente`,
             );
             router.push(formRoutes.edit(projectId, id));
           },
@@ -237,7 +243,9 @@ export const FormsList = () => {
         message:
           kind === "record"
             ? "Sale de «Para diligenciar» y de esta lista, y conserva todas sus respuestas. Se puede reactivar después."
-            : "Deja de ofrecerse para añadir elementos y sale de esta lista, y conserva todos sus elementos. Se puede reactivar después.",
+            : kind === "tracking"
+              ? "Deja de admitir asuntos nuevos y sale de esta lista. Los que ya están abiertos se pueden seguir completando. Se puede reactivar después."
+              : "Deja de ofrecerse para añadir elementos y sale de esta lista, y conserva todos sus elementos. Se puede reactivar después.",
         type: "warning",
         confirmText: "Archivar",
       });
@@ -264,7 +272,7 @@ export const FormsList = () => {
       {
         onSuccess: () =>
           toast.success(
-            `${kind === "record" ? "Formato" : "Listado"} eliminado correctamente`,
+            `${KIND_TEXT[kind].title} eliminado correctamente`,
           ),
         onError,
       },
@@ -332,11 +340,13 @@ export const FormsList = () => {
     <Tabs
       value={view.clase}
       onValueChange={(value) => setView({ clase: value as FormClass })}
-      className="gap-3"
+      // Los cortes se miden contra el espacio que deja el menú lateral, no
+      // contra la ventana (`03 §2.3`).
+      className="@container gap-3"
     >
       <ConfirmDialog />
 
-      <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+      <div className="flex flex-col gap-2 @6xl:flex-row @6xl:items-center">
         <div className="flex min-w-0 items-center gap-3">
           <TabsList>
             {FORM_CLASSES.map((formClass) => (
@@ -354,8 +364,8 @@ export const FormsList = () => {
           ) : null}
         </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center lg:ml-auto">
-          <div className="relative min-w-0 sm:w-72">
+        <div className="flex flex-col gap-2 @xl:flex-row @xl:flex-wrap @xl:items-center @6xl:ml-auto">
+          <div className="relative min-w-0 @xl:w-72">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               className="pl-8"
@@ -371,7 +381,7 @@ export const FormsList = () => {
             {hasCategories ? (
               <SearchableSelect
                 aria-label="Filtrar por categoría"
-                className="min-w-0 flex-1 sm:w-52 sm:flex-none"
+                className="min-w-0 flex-1 @xl:w-52 @xl:flex-none"
                 align="end"
                 searchPlaceholder="Buscar una categoría…"
                 value={category?._id ?? ALL_CATEGORIES}
@@ -421,7 +431,7 @@ export const FormsList = () => {
             />
           ) : (
             <CollectionEmpty
-              icon={ENTITY_ICONS[kind === "record" ? "form" : "catalog"]}
+              icon={KIND_ICON[kind]}
               title={`Todavía no hay ${noun}s.`}
               hint={
                 canCreate
@@ -434,27 +444,34 @@ export const FormsList = () => {
           )
         ) : (
           <>
-            {/* Escritorio y tableta: la tabla. */}
-            <div className="hidden md:block">
+            {/* Con sitio para las columnas: la tabla. */}
+            <div className="hidden @2xl:block">
               <Table className="table-fixed">
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
                     <TableHead className={HEAD_CLASS}>Nombre</TableHead>
+                    {/* Sin sitio para la categoría, viaja en la segunda
+                        línea del nombre. */}
                     {hasCategories ? (
-                      <TableHead className={cn(HEAD_CLASS, "w-44 xl:w-64")}>
+                      <TableHead
+                        className={cn(
+                          HEAD_CLASS,
+                          "hidden w-44 @4xl:table-cell @7xl:w-64",
+                        )}
+                      >
                         Categoría
                       </TableHead>
                     ) : null}
-                    <TableHead className={cn(HEAD_CLASS, "w-56 xl:w-72")}>
+                    <TableHead className={cn(HEAD_CLASS, "w-48 @7xl:w-72")}>
                       Estado
                     </TableHead>
                     <TableHead className={cn(HEAD_CLASS, "w-28 text-right")}>
-                      {kind === "record" ? "Respuestas" : "Elementos"}
+                      {KIND_TEXT[kind].itemsLabel}
                     </TableHead>
                     <TableHead
                       className={cn(
                         HEAD_CLASS,
-                        kind === "record" ? "w-44" : "w-14",
+                        kind === "record" ? "w-24 @5xl:w-44" : "w-14",
                       )}
                     >
                       <span className="sr-only">Acciones</span>
@@ -484,11 +501,16 @@ export const FormsList = () => {
                                 {secondLine(form)}
                               </span>
                             ) : null}
+                            {hasCategories && form.categoryName ? (
+                              <span className="mt-0.5 block truncate text-xs text-muted-foreground @4xl:hidden">
+                                {form.categoryName}
+                              </span>
+                            ) : null}
                           </>,
                         )}
                       </TableCell>
                       {hasCategories ? (
-                        <TableCell className="truncate px-3 text-ui text-muted-foreground">
+                        <TableCell className="hidden truncate px-3 text-ui text-muted-foreground @4xl:table-cell">
                           {form.categoryName ?? (
                             <span className="text-muted-foreground/60">
                               Sin categoría
@@ -508,7 +530,12 @@ export const FormsList = () => {
                       </TableCell>
                       <TableCell className="px-3">
                         <div className="flex items-center justify-end gap-1">
-                          {fillOf(form, false)}
+                          <span className="contents @5xl:hidden">
+                            {fillOf(form, true)}
+                          </span>
+                          <span className="hidden @5xl:contents">
+                            {fillOf(form, false)}
+                          </span>
                           {menuOf(form)}
                         </div>
                       </TableCell>
@@ -518,8 +545,8 @@ export const FormsList = () => {
               </Table>
             </div>
 
-            {/* Teléfono: una fila pulsable por formato. */}
-            <ul className="divide-y divide-border/60 md:hidden">
+            {/* Sin él: una fila pulsable por formato. */}
+            <ul className="divide-y divide-border/60 @2xl:hidden">
               {rows.map((form) => (
                 <li
                   key={form._id}

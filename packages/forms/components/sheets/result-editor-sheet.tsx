@@ -60,6 +60,7 @@ import {
   withHeatValue,
   withOperation,
 } from "../../lib/result-draft";
+import { CoverageEditor } from "../result-editor-coverage";
 import {
   CompositeEditor,
   EditorSection,
@@ -183,7 +184,11 @@ const EditorForm = ({
             <Input
               id="result-name"
               maxLength={RESULT_LIMITS.maxNameLength}
-              placeholder="Ej.: Cumplimiento por semana"
+              placeholder={
+                kind === "tracking"
+                  ? "Ej.: Cierre de hallazgos"
+                  : "Ej.: Cumplimiento por semana"
+              }
               value={draft.name}
               disabled={isPending}
               onChange={(event) => patch({ name: event.target.value })}
@@ -420,6 +425,15 @@ const EditorForm = ({
             </>
           ) : null}
 
+          {draft.type === "coverage" ? (
+            <CoverageEditor
+              draft={draft}
+              fields={fields}
+              disabled={isPending}
+              onChange={patch}
+            />
+          ) : null}
+
           {draft.type === "trend" ? (
             <EditorSection
               title="Más series"
@@ -505,6 +519,8 @@ const EditorForm = ({
           {draft.type === "indicator" ||
           draft.type === "trend" ||
           draft.type === "compliance" ||
+          draft.type === "coverage" ||
+          draft.type === "tracking" ||
           draft.type === "composite" ? (
             <GoalEditor
               goal={draft.goal}

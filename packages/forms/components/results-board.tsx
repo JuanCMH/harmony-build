@@ -24,7 +24,10 @@ import { toast } from "sonner";
 
 import { useComputeFormResults, useRemoveFormResult } from "../api";
 import { RESULT_CATALOG } from "../lib/result-catalog";
+import { arrangeResults } from "../lib/results-layout";
 import { resolveRange } from "../lib/results-range";
+import { suggestedHeight } from "../lib/suggested-height";
+import { HEIGHT_SPAN, SIZE_SPAN, WIDGET_GRID } from "../lib/widget-grid";
 import { useResultEditorSheet } from "../store/use-result-editor-sheet";
 import { useResultsRange } from "../store/use-results-range";
 import { ListEmpty } from "./list-empty";
@@ -32,27 +35,14 @@ import { ResultCard } from "./result-card";
 import { ResultsRangeBar } from "./results-range-bar";
 import { ResultEditorSheet } from "./sheets/result-editor-sheet";
 
-/** Cuánto ocupa cada tipo en la retícula de doce: una cifra cabe en un
- *  tercio, una gráfica en media fila, y una tabla o un mapa de calor piden
- *  la fila. */
-const SPAN: Record<ResultType, string> = {
-  indicator: "lg:col-span-4",
-  composite: "lg:col-span-4",
-  trend: "lg:col-span-6",
-  compliance: "lg:col-span-6",
-  distribution: "lg:col-span-6",
-  findings: "lg:col-span-6",
-  expirations: "lg:col-span-6",
-  table: "lg:col-span-12",
-  heatmap: "lg:col-span-12",
-};
-
 /** El orden en que se enseñan: las cifras juntas arriba, después las
  *  gráficas y al final lo que pide la fila. En el orden en que se crearon,
  *  una cifra suelta entre dos tablas dejaba media fila vacía. */
 const ORDER: readonly ResultType[] = [
   "indicator",
   "composite",
+  "tracking",
+  "coverage",
   "trend",
   "compliance",
   "distribution",
@@ -119,11 +109,12 @@ export const ResultsBoard = ({
   const body = () => {
     if (data === undefined)
       return (
-        <div className="grid gap-4 lg:grid-cols-12" aria-busy="true">
+        <div className={WIDGET_GRID} aria-busy="true">
           <span className="sr-only">Calculando los resultados…</span>
-          <Skeleton className="h-64 rounded-lg lg:col-span-4" />
-          <Skeleton className="h-64 rounded-lg lg:col-span-8" />
-          <Skeleton className="h-48 rounded-lg lg:col-span-12" />
+          <Skeleton className="row-span-2 rounded-lg lg:col-span-4" />
+          <Skeleton className="row-span-2 rounded-lg lg:col-span-4" />
+          <Skeleton className="row-span-2 rounded-lg lg:col-span-4" />
+          <Skeleton className="row-span-3 rounded-lg lg:col-span-12" />
         </div>
       );
     if (data === null)
@@ -152,6 +143,23 @@ export const ResultsBoard = ({
         </div>
       );
 
+    const sorted = [...data.results].sort(
+      (a, b) => ORDER.indexOf(a.config.type) - ORDER.indexOf(b.config.type),
+    );
+    const arranged = arrangeResults(
+      sorted.map((result) => ({
+        type: result.config.type,
+        height: suggestedHeight(
+          result.config.type,
+          result.problem ? undefined : result.data,
+        ),
+      })),
+    ).map(({ index, size, height }) => ({
+      result: sorted[index],
+      size,
+      height,
+    }));
+
     return (
       <>
         {data.capped ? (
@@ -161,62 +169,60 @@ export const ResultsBoard = ({
             cifras son de las más recientes. Acorta el rango para verlas todas.
           </p>
         ) : null}
-        <div className="grid gap-4 lg:grid-cols-12">
-          {[...data.results]
-            .sort(
-              (a, b) =>
-                ORDER.indexOf(a.config.type) - ORDER.indexOf(b.config.type),
-            )
-            .map((result) => (
-              <ResultCard
-                key={result._id}
-                name={result.name}
-                caption={RESULT_CATALOG[result.config.type].label}
-                config={result.config}
-                data={result.data}
-                problem={result.problem}
-                className={cn("h-full", SPAN[result.config.type])}
-                actions={
-                  // Una sola entrada para lo propio de la tarjeta (`03 §2.3`):
-                  // con tres botones sueltos la cabecera se partía en dos.
-                  canEdit || menuItems ? (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="iconSm"
-                          className="text-muted-foreground"
-                          aria-label={`Acciones de ${result.name}`}
-                        >
-                          <MoreHorizontal />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="min-w-52">
-                        {menuItems?.(result)}
-                        {canEdit ? (
-                          <>
-                            <DropdownMenuItem
-                              onSelect={() => setEditing(result)}
-                            >
-                              <Pencil />
-                              Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              variant="destructive"
-                              onSelect={() => handleRemove(result._id)}
-                            >
-                              <Trash2 />
-                              Eliminar
-                            </DropdownMenuItem>
-                          </>
-                        ) : null}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  ) : null
-                }
-              />
-            ))}
+        {/* Aquí nadie los ordena a mano: se acomodan solos, sin huecos, y
+            cada uno con el alto en que caben hoy sus datos. */}
+        <div className={WIDGET_GRID}>
+          {arranged.map(({ result, size, height }) => (
+            <ResultCard
+              key={result._id}
+              name={result.name}
+              caption={RESULT_CATALOG[result.config.type].label}
+              config={result.config}
+              data={result.data}
+              problem={result.problem}
+              today={today}
+              range={range}
+              height={height}
+              className={cn(SIZE_SPAN[size], HEIGHT_SPAN[height])}
+              actions={
+                // Una sola entrada para lo propio de la tarjeta (`03 §2.3`):
+                // con tres botones sueltos la cabecera se partía en dos.
+                canEdit || menuItems ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="iconSm"
+                        className="text-muted-foreground"
+                        aria-label={`Acciones de ${result.name}`}
+                      >
+                        <MoreHorizontal />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="min-w-52">
+                      {menuItems?.(result)}
+                      {canEdit ? (
+                        <>
+                          <DropdownMenuItem onSelect={() => setEditing(result)}>
+                            <Pencil />
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            variant="destructive"
+                            onSelect={() => handleRemove(result._id)}
+                          >
+                            <Trash2 />
+                            Eliminar
+                          </DropdownMenuItem>
+                        </>
+                      ) : null}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : null
+              }
+            />
+          ))}
         </div>
       </>
     );
@@ -227,7 +233,7 @@ export const ResultsBoard = ({
     // tarjetas, 16.
     <div className="space-y-3">
       {/* Un listado no se mira por fechas: sus vencimientos son de hoy. */}
-      {kind === "record" ? (
+      {kind !== "catalog" ? (
         <ResultsRangeBar
           range={range}
           today={today}

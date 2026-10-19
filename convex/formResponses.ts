@@ -6,8 +6,10 @@ import { mutation, query } from "./_generated/server";
 import { todayInColombia } from "./lib/dates";
 import { formResponsesErrors } from "./lib/error_messages";
 import { dateText } from "./lib/field_text";
+import { stagesOf, trackingCode } from "./lib/tracking";
 import {
   canEditEntries,
+  canOpenTracking,
   canViewAll,
   canViewResponse,
   isFillable,
@@ -15,6 +17,7 @@ import {
   mayFill,
   requireUser,
 } from "./lib/form_access";
+import { digestAdd, digestRemove } from "./lib/form_digests";
 import { rowReader } from "./lib/form_rows";
 import { VOID_REASON_MAX, VOID_REASON_MIN } from "./lib/form_types";
 import { resolveValues, writeLinks } from "./lib/form_values";
@@ -82,6 +85,7 @@ export const submit = mutation({
     };
     const responseId = await ctx.db.insert("formResponses", response);
     await writeLinks(ctx, { ...response, _id: responseId }, resolved.links);
+    await digestAdd(ctx, form, [{ ...response, _id: responseId }]);
     await ctx.db.patch(form._id, { responseCount: form.responseCount + 1 });
 
     return responseId;
@@ -105,7 +109,7 @@ const voidResponse = mutation({
       throw new ConvexError(formResponsesErrors.insufficientPermissions);
     }
 
-    if (form.kind !== "record") {
+    if (form.kind === "catalog") {
       throw new ConvexError(formResponsesErrors.cannotVoidEntry);
     }
     if (response.status === "voided") {
@@ -122,9 +126,14 @@ const voidResponse = mutation({
       voidedAt: Date.now(),
       voidReason: reason,
     });
+    // Una respuesta anulada no cuenta en ningún resultado.
+    await digestRemove(ctx, form, [response]);
 
     await ctx.runMutation(internal.logs.create, {
-      description: `Respuesta anulada: ${form.name} del ${dateText(response.date)}`,
+      description:
+        form.kind === "tracking"
+          ? `Asunto anulado: ${form.name}, ${response.title ?? ""}`
+          : `Respuesta anulada: ${form.name} del ${dateText(response.date)}`,
       type: "update",
       projectId: response.projectId,
       affectedEntityType: "formResponse",
@@ -161,18 +170,21 @@ export const getById = query({
     const viewer = await loadViewer(ctx, userId, response.projectId);
     if (!viewer || !canViewResponse(viewer, form, response)) return null;
 
-    const [version, author, voidedBy, updatedBy, files] = await Promise.all([
-      ctx.db.get(response.versionId),
-      publicUser(ctx, response.submittedBy),
-      response.voidedBy ? publicUser(ctx, response.voidedBy) : null,
-      response.updatedBy ? publicUser(ctx, response.updatedBy) : null,
-      Promise.all(
-        storedFileIds(response.values).map(async (storageId) => {
-          const id = ctx.db.system.normalizeId("_storage", storageId);
-          return { storageId, url: id ? await ctx.storage.getUrl(id) : null };
-        }),
-      ),
-    ]);
+    const [version, record, author, voidedBy, updatedBy, files] =
+      await Promise.all([
+        ctx.db.get(response.versionId),
+        response.importId ? ctx.db.get(response.importId) : null,
+        publicUser(ctx, response.submittedBy),
+        response.voidedBy ? publicUser(ctx, response.voidedBy) : null,
+        response.updatedBy ? publicUser(ctx, response.updatedBy) : null,
+        Promise.all(
+          storedFileIds(response.values).map(async (storageId) => {
+            const id = ctx.db.system.normalizeId("_storage", storageId);
+            return { storageId, url: id ? await ctx.storage.getUrl(id) : null };
+          }),
+        ),
+      ]);
+    const importedBy = record ? await publicUser(ctx, record.createdBy) : null;
 
     return {
       _id: response._id,
@@ -201,6 +213,15 @@ export const getById = query({
       /** La dirección firmada de cada archivo y cada firma de `values`. */
       files,
       author,
+      /** Si no se diligenció aquí: cuándo se trajo, quién y de qué archivo.
+       *  El registro de la importación puede faltar; la marca, no. */
+      imported: response.importId
+        ? {
+            at: record?._creationTime ?? response._creationTime,
+            by: importedBy,
+            fileName: record?.fileName ?? null,
+          }
+        : null,
       voided:
         response.status === "voided"
           ? {
@@ -209,14 +230,44 @@ export const getById = query({
               reason: response.voidReason ?? "",
             }
           : null,
-      // Sólo en los elementos de un listado.
+      /** Sólo en un asunto de seguimiento: su consecutivo, sus etapas y si
+       *  quien mira puede completar la que toca. */
+      tracking:
+        form.kind === "tracking"
+          ? {
+              code: trackingCode({
+                prefix: form.numberPrefix,
+                year: response.year,
+                number: response.number,
+              }),
+              dueDate: response.dueDate ?? null,
+              responsible: response.responsibleLabel ?? null,
+              closedAt: response.closedAt ?? null,
+              stages: await Promise.all(
+                stagesOf(version?.sections ?? []).map(async (section, index) => {
+                  const done = response.stages?.[index];
+                  return {
+                    sectionId: section.id,
+                    label: section.label,
+                    completedAt: done?.completedAt ?? null,
+                    completedBy: done
+                      ? await publicUser(ctx, done.completedBy)
+                      : null,
+                  };
+                }),
+              ),
+              canComplete:
+                response.status === "open" && canOpenTracking(viewer, form),
+            }
+          : null,
+      // En los elementos de un listado y en los asuntos de un seguimiento.
       title: response.title ?? null,
       active: response.active ?? null,
       updatedAt: response.updatedAt ?? null,
       updatedBy,
       canVoid:
-        form.kind === "record" &&
-        response.status === "submitted" &&
+        form.kind !== "catalog" &&
+        response.status !== "voided" &&
         viewer.access.can("voidResponses"),
       canEdit: canEditEntries(viewer, form),
     };
@@ -224,7 +275,8 @@ export const getById = query({
 });
 
 /**
- * Las respuestas de un formato, lo más reciente primero.
+ * Las respuestas de un formato, por fecha de negocio, lo más reciente
+ * primero.
  *
  * Quien no tiene `viewResponses` recibe **sólo las suyas**, pida lo que pida:
  * la llave se comprueba aquí y no se confía en que la pantalla filtre
@@ -287,7 +339,9 @@ export const list = query({
       return { ...page, page: rows };
     }
 
-    const hasRange = args.from !== undefined || args.to !== undefined;
+    // Siempre por fecha de negocio: una respuesta importada se creó hoy y
+    // ocurrió hace meses, así que el orden de creación ya no es el de los
+    // hechos. A igual fecha, el índice desempata por creación.
     const responses = onlyMine
       ? ctx.db
           .query("formResponses")
@@ -298,15 +352,11 @@ export const list = query({
               .gte("date", from)
               .lte("date", to),
           )
-      : hasRange
-        ? ctx.db
-            .query("formResponses")
-            .withIndex("formId_date", (q) =>
-              q.eq("formId", form._id).gte("date", from).lte("date", to),
-            )
-        : ctx.db
-            .query("formResponses")
-            .withIndex("formId", (q) => q.eq("formId", form._id));
+      : ctx.db
+          .query("formResponses")
+          .withIndex("formId_date", (q) =>
+            q.eq("formId", form._id).gte("date", from).lte("date", to),
+          );
 
     const page = await responses.order("desc").paginate(args.paginationOpts);
     return { ...page, page: await Promise.all(page.page.map(toRow)) };

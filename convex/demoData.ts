@@ -23,6 +23,8 @@ import {
   internalQuery,
 } from "./_generated/server";
 import { addDays } from "./lib/date_buckets";
+import { entryTitle } from "./lib/entry_title";
+import { digestAdd } from "./lib/form_digests";
 import { flattenFields } from "./lib/form_evaluation";
 import { loadPublished } from "./lib/form_store";
 import type {
@@ -35,11 +37,18 @@ import type {
   TableColumn,
   TableConfig,
 } from "./lib/form_types";
-import { resolveValues, writeLinks } from "./lib/form_values";
+import {
+  replaceLinks,
+  resolveValues,
+  writeLinks,
+} from "./lib/form_values";
 import { toStoredValues } from "./lib/stored_values";
+import { nextTrackingNumber, stagesOf, trackingFacts } from "./lib/tracking";
 
 /** Cómo debe salir un campo: un rango para números (o días de corrimiento
- *  para fechas) y los textos entre los que se elige. */
+ *  para fechas) y los textos entre los que se elige. En una relación, los
+ *  textos son los títulos de los elementos entre los que se elige: la
+ *  inspección de la planta no elige el cargador. */
 const fieldHint = v.object({
   min: v.optional(v.number()),
   max: v.optional(v.number()),
@@ -106,7 +115,7 @@ interface Generator {
   hints: Hints;
   failRate: number;
   /** Los elementos activos de cada listado, por id de formato. */
-  entries: Map<string, Id<"formResponses">[]>;
+  entries: Map<string, { id: Id<"formResponses">; title: string }[]>;
   /** Entrega un archivo ya subido: una firma o una imagen. */
   file: (kind: "signature" | "image") => string;
 }
@@ -131,12 +140,20 @@ function dateFor(g: Generator, fieldId: string): string {
   return addDays(g.date, between(g.random, hint?.min ?? 0, hint?.max ?? 0));
 }
 
-function referenceFor(g: Generator, formId: string | undefined) {
-  const entries = g.entries.get(formId ?? "") ?? [];
+function referenceFor(
+  g: Generator,
+  formId: string | undefined,
+  fieldId: string,
+) {
+  const all = g.entries.get(formId ?? "") ?? [];
+  const titles = g.hints[fieldId]?.texts;
+  const entries = titles
+    ? all.filter((entry) => titles.includes(entry.title))
+    : all;
   if (entries.length === 0) return undefined;
   // Los primeros elementos salen más: una obra usa más unos equipos que otros.
   const index = Math.floor(g.random() ** 1.6 * entries.length);
-  return { responseId: entries[index], label: "", snapshot: [] };
+  return { responseId: entries[index].id, label: "", snapshot: [] };
 }
 
 /** Las opciones primeras son las corrientes: salen más. */
@@ -199,7 +216,7 @@ function cellFor(g: Generator, column: TableColumn): unknown {
     case "checkbox":
       return true;
     case "reference":
-      return referenceFor(g, column.reference?.formId);
+      return referenceFor(g, column.reference?.formId, column.id);
     case "image":
       return column.required
         ? { storageId: g.file("image"), name: "foto.jpg" }
@@ -232,7 +249,7 @@ function valueFor(g: Generator, field: FormField, subject: string): unknown {
       return value ? [value] : [];
     }
     case "reference":
-      return referenceFor(g, field.config.reference?.formId);
+      return referenceFor(g, field.config.reference?.formId, field.id);
     case "checklist":
       return field.config.checklist
         ? checklistFor(g, field.config.checklist, subject)
@@ -327,7 +344,10 @@ export const filesFor = internalQuery({
 });
 
 async function activeEntries(ctx: MutationCtx, project: Doc<"projects">) {
-  const entries = new Map<string, Id<"formResponses">[]>();
+  const entries = new Map<
+    string,
+    { id: Id<"formResponses">; title: string }[]
+  >();
   const forms = await ctx.db
     .query("forms")
     .withIndex("projectId", (q) => q.eq("projectId", project._id))
@@ -339,7 +359,9 @@ async function activeEntries(ctx: MutationCtx, project: Doc<"projects">) {
       .take(ENTRIES_PER_CATALOG);
     entries.set(
       form._id,
-      rows.filter((row) => row.active !== false).map((row) => row._id),
+      rows
+        .filter((row) => row.active !== false)
+        .map((row) => ({ id: row._id, title: row.title ?? "" })),
     );
   }
   return entries;
@@ -377,6 +399,10 @@ export const writeDay = internalMutation({
       const version = await loadPublished(ctx, form);
       if (!version) throw new ConvexError(`«${form.name}» no está publicado`);
 
+      const added: Pick<
+        Doc<"formResponses">,
+        "_id" | "date" | "values" | "versionId"
+      >[] = [];
       for (let index = 0; index < item.count; index++) {
         const random = seeded(`${form._id}:${args.date}:${index}`);
         const authorId = pick(random, authors);
@@ -415,13 +441,162 @@ export const writeDay = internalMutation({
         };
         const responseId = await ctx.db.insert("formResponses", response);
         await writeLinks(ctx, { ...response, _id: responseId }, resolved.links);
+        added.push({ ...response, _id: responseId });
         written += 1;
       }
+      await digestAdd(ctx, form, added);
       await ctx.db.patch(form._id, {
         responseCount: form.responseCount + item.count,
       });
     }
     return written;
+  },
+});
+
+/** Las diez de la mañana en Colombia del día `date`: la hora a la que se da
+ *  por hecho lo que se siembra en una fecha elegida. */
+const timeOf = (date: string): number => Date.parse(`${date}T15:00:00Z`);
+
+/**
+ * Abre asuntos **ficticios** en un seguimiento, con la fecha que se le diga,
+ * y cierra una parte: es lo que deja ver un resultado de seguimiento con
+ * abiertos, vencidos y cerrados.
+ *
+ * Como `writeDay`, no sabe nada del formato: genera un valor por tipo de
+ * campo, etapa a etapa, y todo pasa por `resolveValues`. Un asunto sólo se
+ * cierra si su cierre cae antes de hoy. No sube archivos: una etapa que
+ * exija una firma o una foto no se puede sembrar.
+ */
+export const seedIssues = internalMutation({
+  args: {
+    projectId: v.id("projects"),
+    formId: v.id("forms"),
+    /** El día en que se abren. */
+    date: v.string(),
+    count: v.number(),
+    /** La probabilidad de que un asunto se cierre. */
+    closeRate: v.optional(v.number()),
+    /** Cuántos días tarda el cierre, como mucho. */
+    closeWithin: v.optional(v.number()),
+    hints: v.optional(formHints),
+  },
+  handler: async (ctx, args) => {
+    const project = await ctx.db.get(args.projectId);
+    const form = await ctx.db.get(args.formId);
+    if (!project || !form || form.projectId !== project._id) {
+      throw new ConvexError("El seguimiento no es de este proyecto");
+    }
+    if (form.kind !== "tracking") {
+      throw new ConvexError(`«${form.name}» no es un seguimiento`);
+    }
+    if (args.count > MAX_PER_DAY) {
+      throw new ConvexError(`Máximo ${MAX_PER_DAY} asuntos por día`);
+    }
+    const version = await loadPublished(ctx, form);
+    if (!version) throw new ConvexError(`«${form.name}» no está publicado`);
+
+    const stages = stagesOf(version.sections);
+    const entries = await activeEntries(ctx, project);
+    const author = await ctx.db.get(project.userId);
+    const signerName = author?.name?.trim() || "Usuario desconocido";
+    const generator = (random: () => number, date: string): Generator => ({
+      random,
+      date,
+      hints: args.hints ?? {},
+      failRate: 0,
+      entries,
+      file: () => {
+        throw new ConvexError("Un seguimiento con archivos no se siembra");
+      },
+    });
+
+    let lastNumber = form.lastNumber;
+    let closed = 0;
+    for (let index = 0; index < args.count; index++) {
+      const random = seeded(`${form._id}:${args.date}:${index}`);
+      const [first, ...rest] = stages;
+      const opened = await resolveValues(ctx, {
+        projectId: project._id,
+        sections: [first],
+        values: toStoredValues(
+          [first],
+          generate(generator(random, args.date), [first]),
+        ) as never,
+        date: args.date,
+        authorId: project.userId,
+        signerName,
+      });
+      const year = Number(args.date.slice(0, 4));
+      lastNumber = nextTrackingNumber(lastNumber, year);
+      const issue = {
+        formId: form._id,
+        projectId: project._id,
+        versionId: version._id,
+        date: args.date,
+        submittedBy: project.userId,
+        status: "open" as const,
+        number: lastNumber.value,
+        year,
+        stages: [
+          {
+            sectionId: first.id,
+            completedBy: project.userId,
+            completedAt: timeOf(args.date),
+          },
+        ],
+        ...entryTitle(form, version.sections, opened.values),
+        ...trackingFacts(form, version.sections, opened.values),
+        values: opened.values,
+      };
+      const issueId = await ctx.db.insert("formResponses", issue);
+      await writeLinks(ctx, { ...issue, _id: issueId }, opened.links);
+
+      // El cierre: las etapas que faltan, todas el mismo día.
+      const closeDate = addDays(
+        args.date,
+        between(random, 1, args.closeWithin ?? 10),
+      );
+      const closes =
+        rest.length > 0 &&
+        random() < (args.closeRate ?? 0.7) &&
+        timeOf(closeDate) <= Date.now();
+      if (!closes) continue;
+
+      const resolved = await resolveValues(ctx, {
+        projectId: project._id,
+        sections: stages,
+        values: [
+          ...opened.values,
+          ...(toStoredValues(
+            rest,
+            generate(generator(random, closeDate), rest),
+          ) as typeof opened.values),
+        ],
+        date: args.date,
+        authorId: project.userId,
+        signerName,
+        previous: opened.values,
+      });
+      await ctx.db.patch(issueId, {
+        values: resolved.values,
+        status: "closed",
+        closedAt: timeOf(closeDate),
+        stages: stages.map((stage, at) => ({
+          sectionId: stage.id,
+          completedBy: project.userId,
+          completedAt: timeOf(at === 0 ? args.date : closeDate),
+        })),
+        ...trackingFacts(form, version.sections, resolved.values),
+      });
+      await replaceLinks(ctx, { ...issue, _id: issueId }, resolved.links);
+      closed += 1;
+    }
+
+    await ctx.db.patch(form._id, {
+      responseCount: form.responseCount + args.count,
+      lastNumber,
+    });
+    return { opened: args.count, closed };
   },
 });
 

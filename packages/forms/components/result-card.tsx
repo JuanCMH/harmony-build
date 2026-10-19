@@ -1,6 +1,6 @@
 "use client";
 
-import { PanelCard } from "@/components/harmony/panel-card";
+import { WidgetCard } from "@/components/harmony/widget-card";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -8,10 +8,12 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import type { ResultConfig, ResultData } from "@/convex/lib/result_types";
+import type { WidgetHeight } from "@/convex/lib/result_validators";
 import { Info } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { RESULT_CATALOG } from "../lib/result-catalog";
+import type { ResultsRange } from "../lib/results-range";
 import { ResultView } from "./result-view";
 
 interface ResultCardProps {
@@ -21,16 +23,24 @@ interface ResultCardProps {
   config: ResultConfig;
   data: ResultData;
   problem: string | null;
+  /** El día de hoy en Colombia. */
+  today: string;
+  /** El rango que se mira. */
+  range: ResultsRange;
+  /** Cuántos pisos ocupa: el contenido se adapta a ellos. */
+  height: WidgetHeight;
   /** Lo propio de la tarjeta: «Editar», «Quitar». */
   actions?: ReactNode;
   /** Un aviso sobre las cifras: que son de una parte del periodo. */
   notice?: string;
+  /** El sitio en la retícula: columnas y pisos. */
   className?: string;
 }
 
 /**
- * Un resultado en su tarjeta (`03 §1.3`): el icono de su tipo, su nombre,
- * cómo se lee y, dentro, su gráfica. La misma en la página del formato y en el tablero.
+ * Un resultado en su tarjeta (`03 §1.3`): su nombre, de dónde sale con el
+ * glifo de su tipo, cómo se lee y, dentro, su gráfica. La misma en la página
+ * del formato y en el tablero.
  */
 export const ResultCard = ({
   name,
@@ -38,16 +48,24 @@ export const ResultCard = ({
   config,
   data,
   problem,
+  today,
+  range,
+  height,
   actions,
   notice,
   className,
 }: ResultCardProps) => {
   const kind = RESULT_CATALOG[config.type];
+  const table = config.type === "table" && !problem;
   return (
-    <PanelCard
+    <WidgetCard
       icon={kind.icon}
       title={name}
-      description={caption}
+      caption={caption}
+      className={className}
+      // La tabla va a sangre: sus celdas ya traen el margen, y con otro
+      // encima queda una caja dentro de la tarjeta (`03 §1.3`).
+      bleed={table}
       actions={
         <>
           {/* Un popover y no un tooltip: en teléfono no hay «pasar por
@@ -71,16 +89,12 @@ export const ResultCard = ({
           {actions}
         </>
       }
-      className={className}
-      // La tabla va a sangre: sus celdas ya traen el margen, y con otro
-      // encima queda una caja dentro de la tarjeta (`03 §1.3`).
-      contentClassName={config.type === "table" ? "p-0" : "p-4"}
     >
       {notice ? (
         <p
           className={
-            config.type === "table"
-              ? "flex items-start gap-1.5 px-4 pt-3 text-xs text-muted-foreground"
+            table
+              ? "flex items-start gap-1.5 px-4 pb-2 text-xs text-muted-foreground"
               : "mb-3 flex items-start gap-1.5 text-xs text-muted-foreground"
           }
         >
@@ -88,7 +102,14 @@ export const ResultCard = ({
           {notice}
         </p>
       ) : null}
-      <ResultView config={config} data={data} problem={problem} />
-    </PanelCard>
+      <ResultView
+        config={config}
+        data={data}
+        problem={problem}
+        today={today}
+        height={height}
+        range={range}
+      />
+    </WidgetCard>
   );
 };

@@ -92,6 +92,8 @@ export async function rowReader(ctx: QueryCtx, form: Doc<"forms">) {
               reason: response.voidReason ?? "",
             }
           : null,
+      /** Si la trajo una importación en vez de diligenciarse aquí. */
+      imported: response.importId !== undefined,
       versionId: response.versionId,
       versionNumber: version.number,
       // Sólo en los elementos de un listado.

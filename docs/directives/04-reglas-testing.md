@@ -188,7 +188,11 @@ aunque se reescriban:
 | `projects.test.ts` | Crear deja un propietario y un código; las lecturas **nunca** devuelven `joinCode`; el código sólo lo lee y lo renueva quien tiene `inviteUsers`; unirse concede `member` sin rol una sola vez; transferir mueve la fila y `projects.userId` a la vez; sólo el propietario elimina; la purga drena lo suyo y no toca al vecino. |
 | `members.test.ts` | **Las escaladas**: `assignRoles` no asciende a administrador, `expelUsers` no expulsa a uno, el propietario ni cambia ni sale; un rol de otro proyecto no se acepta; las lecturas no devuelven el documento de `users` entero. |
 | `logs.test.ts` | El autor sale de la sesión; sin sesión no se escribe; lo que hace la plataforma lo firma la plataforma; leer exige `viewLogs`; el intervalo se respeta; una entrada sin proyecto no la lee nadie; el día se calcula en hora de Colombia. |
-| `form-results.test.ts` | **Resultados y tablero**: definir un resultado exige `editForms` y queda en auditoría; alguien de otro proyecto no lo toca; se rechaza lo que no cuadra con los campos del formato y lo que pasa del tope; `compute` es de quien ve las respuestas de todos, no cuenta las anuladas, devuelve `null` con un rango que no lo es y dice qué resultado quedó sin su campo; el tablero lo ve `viewResponses` y lo arma `editProject`, no acepta un resultado de otro proyecto ni ids repetidos, y deja de mostrar el que se borró; borrar el formato y purgar el proyecto se llevan lo suyo; `installSst` instala resultados y tablero sin repetirlos. |
+| `form-results.test.ts` | **Resultados y tablero**: definir un resultado exige `editForms` y queda en auditoría; alguien de otro proyecto no lo toca; se rechaza lo que no cuadra con los campos del formato y lo que pasa del tope; `compute` es de quien ve las respuestas de todos, no cuenta las anuladas, devuelve `null` con un rango que no lo es y dice qué resultado quedó sin su campo; el tablero lo ve `viewResponses` y lo arma `editProject`, no acepta un resultado de otro proyecto ni ids repetidos, y deja de mostrar el que se borró; borrar el formato y purgar el proyecto se llevan lo suyo; `installSst` instala resultados y tablero sin repetirlos, y sólo con `update` o `resetDashboard` toca lo que ya estaba; un **programa** espera a todos los elementos activos de su listado, también al que nunca se inspeccionó. |
+
+| `form-imports.test.ts` | **Importar**: exige `importResponses` y diligenciar no basta; alguien de otro proyecto no escribe, cierra, deshace ni lee; sólo quien empezó continúa; la fecha del hecho entra hacia atrás y no hacia delante; firma, imagen, archivo, tabla y lista completa no se exigen, y lo demás sí; una fila mala no tumba el lote; la relación la compone el servidor, admite un elemento inactivo y rechaza uno de otro proyecto; un listado omite o actualiza por título; deshacer retira lo suyo y su cuenta, y conserva el elemento que ya se usó; la purga del proyecto y el borrado del formato se llevan el registro. |
+| `form-digests.test.ts` | **Resúmenes diarios**: un año de 700 respuestas se calcula entero; lo que sale de los resúmenes es **idéntico** a lo que sale de leer las respuestas; no guardan lo que ningún resultado mira; diligenciar suma, anular resta y deshacer una importación retira lo suyo; un formato con respuestas anteriores se calcula con tope hasta reconstruirlo, y reconstruir es idempotente; la purga se los lleva. |
+| `form-trackings.test.ts` | **Seguimientos**: cada etapa tiene campos y ninguna va condicionada; abrir guarda sólo la primera etapa, con su consecutivo y su título; completar avanza en orden, **no toca lo ya completado** y cierra con la última; un asunto sigue con la versión con que se abrió; no se diligencia ni se importa; alguien de otro proyecto no abre ni completa; la bandeja separa abiertos y cerrados y da sólo los propios a quien no ve los de todos; anular lo saca de los abiertos; sus **resultados** dicen cuánto se abrió, cuánto se cerró y qué sigue abierto y vencido, no cuentan lo anulado, son de quien ve las respuestas de todos y no admiten los tipos de una inspección. |
 
 Cada caso de esas suites corresponde a un agujero de `01 §10`. **Una prueba de
 aislamiento ataca desde fuera**: con la sesión de alguien que pertenece a otro
@@ -411,7 +415,12 @@ bunx convex run demoData:seedDay '{"projectId":"…","date":"2026-10-08",
 
 - Es genérica: genera un valor por **tipo de campo** a partir de la versión
   publicada, sin conocer ningún formato. `hints` (por id de campo: `min`,
-  `max`, `texts`) acerca los datos a los de una obra.
+  `max`, `texts`) acerca los datos a los de una obra. En una relación,
+  `texts` son los títulos de los elementos entre los que se elige: sin eso,
+  la inspección de la planta elige cualquier equipo del listado.
+- `demoData:seedIssues` hace lo mismo con un **seguimiento**: abre asuntos
+  con la fecha que se le diga y cierra una parte (`closeRate`,
+  `closeWithin`). No sube archivos.
 - Hasta 40 respuestas por llamada. Se siembra **del día más viejo al más
   nuevo**: la fecha de negocio aquí se elige, y el orden de creación tiene que
   seguir siendo el de las fechas.

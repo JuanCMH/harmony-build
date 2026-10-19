@@ -75,8 +75,9 @@ const CellText = ({ cell }: { cell: ResponseCell }) => {
   if (!cell.hasFindings) return <>{cell.text}</>;
   return (
     <>
+      {/* Cada parte entera en su línea: «4 no / conformes» no se lee. */}
       {cellParts(cell).map((part, index) => (
-        <span key={part.text}>
+        <span key={part.text} className="whitespace-nowrap">
           {index > 0 ? " · " : null}
           {part.isFinding ? (
             <span className="inline-flex items-center gap-1 font-medium text-red-700 dark:text-red-400">
@@ -95,6 +96,12 @@ const CellText = ({ cell }: { cell: ResponseCell }) => {
   );
 };
 
+/** Lo que acompaña a la fecha: la hora en que se diligenció. La de una
+ *  respuesta importada es la de la importación, no la del hecho, así que en
+ *  su sitio se dice qué es. */
+const rowTimeText = (row: ResponseRow) =>
+  row.imported ? "Importada" : timeText(row._creationTime);
+
 const VoidedBadge = () => (
   <Badge variant="outline" className={STATUS_TONE_CLASS[VOIDED_BADGE.tone]}>
     {VOIDED_BADGE.label}
@@ -112,7 +119,7 @@ const TableLoading = () => (
       <div key={index} className="flex items-center gap-4 px-3 py-3">
         <Skeleton className="h-3.5 w-28" />
         <Skeleton className="h-3.5 w-32" />
-        <Skeleton className="hidden h-3.5 flex-1 md:block" />
+        <Skeleton className="hidden h-3.5 flex-1 @3xl:block" />
         <Skeleton className="h-3.5 w-8" />
       </div>
     ))}
@@ -176,8 +183,10 @@ export const ResponsesTable = ({
   ) : null;
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+    // Los cortes se miden contra el espacio que deja el menú lateral, no
+    // contra la ventana (`03 §2.3`).
+    <div className="@container space-y-3">
+      <div className="flex flex-col gap-2 @4xl:flex-row @4xl:items-center">
         <div className="min-w-0 space-y-1">
           {lead}
           {!isLoading ? (
@@ -240,14 +249,12 @@ export const ResponsesTable = ({
           )
         ) : (
           <>
-            {/* Escritorio y tableta: la tabla. */}
-            <div className="hidden md:block">
+            {/* Con sitio para las columnas: la tabla. */}
+            <div className="hidden @3xl:block">
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
-                    <TableHead className={cn(HEAD_CLASS, "w-44")}>
-                      Fecha
-                    </TableHead>
+                    <TableHead className={HEAD_CLASS}>Fecha</TableHead>
                     <TableHead className={HEAD_CLASS}>
                       Diligenciada por
                     </TableHead>
@@ -256,6 +263,9 @@ export const ResponsesTable = ({
                         key={column.fieldId}
                         className={cn(
                           HEAD_CLASS,
+                          // El encabezado lo nombra quien diseña el formato:
+                          // uno largo se parte en vez de ensanchar la columna.
+                          "h-auto min-h-9 py-2 whitespace-normal",
                           isNumericColumn(column) && "text-right",
                         )}
                       >
@@ -290,7 +300,7 @@ export const ResponsesTable = ({
                           >
                             {dateText(row.date)}
                             <span className="ml-2 font-normal text-muted-foreground">
-                              {timeText(row._creationTime)}
+                              {rowTimeText(row)}
                             </span>
                           </Link>
                           {isVoided ? (
@@ -333,8 +343,8 @@ export const ResponsesTable = ({
               </Table>
             </div>
 
-            {/* Teléfono: una fila pulsable por respuesta, con lo esencial. */}
-            <ul className="divide-y divide-border/60 md:hidden">
+            {/* Sin él: una fila pulsable por respuesta, con lo esencial. */}
+            <ul className="divide-y divide-border/60 @3xl:hidden">
               {rows.map((row) => {
                 const isVoided = row.status === "voided";
                 const details = phoneRowDetails(
@@ -358,7 +368,7 @@ export const ResponsesTable = ({
                         >
                           {dateText(row.date)}
                           <span className="ml-2 font-normal text-muted-foreground">
-                            {timeText(row._creationTime)}
+                            {rowTimeText(row)}
                           </span>
                         </span>
                         {isVoided ? <VoidedBadge /> : null}
@@ -367,9 +377,12 @@ export const ResponsesTable = ({
                         {row.author.name}
                       </span>
                       {details.map((cell) => (
+                        // Dos líneas, no una: el resumen de una lista de
+                        // chequeo pone al final lo que importa, los no
+                        // conformes.
                         <span
                           key={cell.fieldId}
-                          className="block truncate text-ui"
+                          className="line-clamp-2 text-ui"
                         >
                           <span className="text-muted-foreground">
                             {cell.label}:{" "}

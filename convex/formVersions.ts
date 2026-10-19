@@ -29,7 +29,11 @@ import type { FormSection } from "./lib/form_types";
 import { validateForm } from "./lib/form_validation";
 import { formSections } from "./lib/form_validators";
 
-const KIND_NOUN = { record: "Formato", catalog: "Listado" } as const;
+const KIND_NOUN = {
+  record: "Formato",
+  catalog: "Listado",
+  tracking: "Seguimiento",
+} as const;
 
 /** El borrador de un formato. Existe siempre: nace con él. */
 async function requireDraft(ctx: QueryCtx, form: Doc<"forms">) {
@@ -221,7 +225,7 @@ export const publish = mutation({
     if (flattenFields(sections).length === 0) {
       throw new ConvexError(formsErrors.emptyForm);
     }
-    if (form.kind === "catalog" && !form.titleFieldId) {
+    if (form.kind !== "record" && !form.titleFieldId) {
       throw new ConvexError(formsErrors.titleFieldRequired);
     }
     requireValid(form, sections);

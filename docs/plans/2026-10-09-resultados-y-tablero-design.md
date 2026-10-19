@@ -243,6 +243,9 @@ que un enlace al tablero de septiembre abre septiembre (`02 §8`).
 
 ### 4. Un tablero por proyecto, con pestañas
 
+> El tamaño de cada resultado en el tablero —ancho **y alto**— lo fija ahora
+> `2026-10-14-tablero-a-la-medida-design.md`.
+
 El proyecto tiene **un** tablero. Sus **pestañas** agrupan resultados por lo
 que se viene a mirar —los vehículos, las personas—, no por formato: una
 pestaña mezcla resultados de varios.
@@ -292,7 +295,7 @@ el suyo.
 | Ítems de unos hallazgos | 8 | — |
 | Filas de unos vencimientos | 30 | Los contadores de vencidos y por vencer sí cuentan todas. |
 | Puntos de una tendencia | 62 | El intervalo se ensancha. |
-| Pestañas del tablero | 8 | — |
+| Pestañas del tablero | 8 *(20 desde el 2026-10-12: las que no caben van en «Más»)* | — |
 | Resultados por pestaña | 12 | — |
 | Nombre de una pestaña | 40 caracteres | — |
 
@@ -457,7 +460,8 @@ campo a partir de la versión publicada.
 
 ### 9. Qué queda fuera, y el paso siguiente
 
-- **Resúmenes diarios mantenidos al escribir.** Es la forma 4 de `01 §6` y lo
+- **Resúmenes diarios mantenidos al escribir.** *Hecho el 2026-10-10:
+  `2026-10-10-resumenes-de-resultados-design.md`.* Era la forma 4 de `01 §6` y lo
   que levanta el tope de 300 respuestas: una tabla derivada, por formato y
   día, que se actualiza en la misma transacción que la respuesta y su
   anulación, y que cumple `01 §7.3` —también reconstruirse cuando cambia la
@@ -539,7 +543,8 @@ mirar otra vez:
 7. **Actualizar la biblioteca no actualiza sus resultados.** `"update":true`
    publica una versión nueva de los formatos que cambiaron; un resultado de
    la biblioteca que ya existe se deja como está, aunque la biblioteca lo
-   haya corregido.
+   haya corregido. *Resuelta el 2026-10-12: con `update` se pone al día
+   (`2026-10-12-programa-y-cierre-de-hallazgos-design.md §3`).*
 8. **La siembra de demostración no marca ni borra lo suyo.** `04 §7` pide que
    una siembra marque con un prefijo lo que crea y sepa retirarlo; ésta
    escribe respuestas indistinguibles de las reales y sin vuelta atrás. Hoy se

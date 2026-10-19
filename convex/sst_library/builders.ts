@@ -216,6 +216,11 @@ export const reference = (
     reference: { formId: `${LIBRARY_REFERENCE_PREFIX}${catalogKey}`, fill },
   });
 
+/** Una fotografía. A fila entera: en el teléfono es un botón del ancho de la
+ *  pantalla. */
+export const image = (label: string, extras: FieldExtras = {}): FormField =>
+  field("image", label, "full", { ...extras, size: "full" });
+
 export const signature = (
   label: string,
   signer: SignatureConfig["signer"],

@@ -25,6 +25,8 @@ export const RESULT_TYPES = [
   "heatmap",
   "expirations",
   "composite",
+  "coverage",
+  "tracking",
 ] as const;
 export type ResultType = (typeof RESULT_TYPES)[number];
 
@@ -91,6 +93,17 @@ export type ResultInterval = (typeof RESULT_INTERVALS)[number];
 export const HEAT_VALUES = ["count", "sum", "failures"] as const;
 export type HeatValue = (typeof HEAT_VALUES)[number];
 
+/** A quién se espera en un programa. `catalog`: todos los elementos activos
+ *  del listado. `seen`: sólo los que tienen alguna respuesta en el periodo
+ *  —un listado suele mezclar clases, y a la inspección de la planta no se le
+ *  pide el cargador—. */
+export const COVERAGE_SCOPES = ["catalog", "seen"] as const;
+export type CoverageScope = (typeof COVERAGE_SCOPES)[number];
+
+/** Los días de la semana, como los numera un programa: 1 es lunes y 7,
+ *  domingo. */
+export const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7] as const;
+
 /** Lo que cualquier resultado de respuestas puede llevar además de lo
  *  suyo: las condiciones que deciden qué respuestas entran. Se cumplen
  *  todas; es la misma regla campo–operador–valor de la visibilidad. */
@@ -139,6 +152,21 @@ export type ResultConfig =
       /** El campo numérico (`sum`) o la lista de chequeo (`failures`). */
       valueFieldId?: string;
     } & Filtered)
+  /** Si se inspeccionó todo lo que tocaba: cada elemento de un listado,
+   *  cada día, cada semana o cada mes. */
+  | ({
+      type: "coverage";
+      /** La relación que dice qué elemento se inspeccionó. */
+      byFieldId: string;
+      /** Cada cuánto le toca a cada elemento. */
+      interval: ResultInterval;
+      /** Sólo con `day`: los días de la semana que cuentan. Sin él, todos. */
+      weekdays?: number[];
+      scope: CoverageScope;
+      goal?: ResultGoal;
+    } & Filtered)
+  /** Sólo en seguimientos: si se está cerrando lo que se abre. */
+  | ({ type: "tracking"; goal?: ResultGoal } & Filtered)
   /** Sólo en listados: los elementos cuya fecha está por vencer. */
   | { type: "expirations"; dateFieldIds: string[] }
   /** Una cifra hecha de indicadores de varios formatos: ausentismo ÷ HHT. */
@@ -178,6 +206,9 @@ export const RESULT_LIMITS = {
   maxPoints: 62,
   /** Días a partir de los cuales una fecha se da por «próxima a vencer». */
   expirationWarningDays: 30,
+  /** Los asuntos abiertos que más urgen, en un resultado de seguimiento: los
+   *  que caben en una tarjeta alta. */
+  maxPending: 10,
 } as const;
 
 /* ───────────────────────────── Lo que se calcula ────────────────────────── */
@@ -194,6 +225,25 @@ export interface CompliancePoint {
   fail: number;
   /** De 0 a 100; `null` sin ítems respondidos en el intervalo. */
   percent: number | null;
+}
+
+export interface CoveragePoint {
+  key: string;
+  done: number;
+  expected: number;
+  /** De 0 a 100; `null` si en el intervalo no tocaba nada. */
+  percent: number | null;
+}
+
+/** Un asunto abierto, como lo enseña un resultado de seguimiento. */
+export interface PendingIssue {
+  id: string;
+  code: string;
+  title: string;
+  /** El día en que se abrió. */
+  date: string;
+  dueDate: string | null;
+  responsible: string | null;
 }
 
 export interface ExpirationRow {
@@ -271,6 +321,48 @@ export type ResultData =
       rows: ExpirationRow[];
       expired: number;
       soon: number;
+    }
+  | {
+      type: "coverage";
+      /** Cada cuánto toca: lo que se configuró. */
+      every: ResultInterval;
+      /** El intervalo de cada punto de la evolución. */
+      interval: ResultInterval;
+      /** Veces que se hizo sobre veces que tocaba; `null` si no tocaba nada. */
+      percent: number | null;
+      done: number;
+      expected: number;
+      /** A cuántos elementos se esperaba. */
+      elements: number;
+      /** Cuántos no tienen ninguna respuesta en el periodo. */
+      missing: number;
+      points: CoveragePoint[];
+      /** Los menos cubiertos primero. */
+      rows: {
+        key: string;
+        label: string;
+        done: number;
+        expected: number;
+        /** La fecha de su última respuesta en el periodo. */
+        last: string | null;
+      }[];
+      /** Los elementos que no cupieron en las filas. */
+      others: number;
+    }
+  | {
+      type: "tracking";
+      /** Abiertos hoy, sin mirar el periodo, y cuántos ya pasaron su fecha. */
+      open: number;
+      overdue: number;
+      /** Abiertos en el periodo, y cuántos de ésos están cerrados. */
+      opened: number;
+      closed: number;
+      /** `closed` sobre `opened`; `null` si no se abrió ninguno. */
+      percent: number | null;
+      /** Los días que tardó el cierre, en promedio. */
+      averageDays: number | null;
+      /** Los abiertos que más urgen: los vencidos primero. */
+      pending: PendingIssue[];
     }
   | {
       type: "composite";

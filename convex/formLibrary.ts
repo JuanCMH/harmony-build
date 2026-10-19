@@ -31,7 +31,18 @@ import { writeSystemLog } from "./logs";
 import { dashboardOf } from "./dashboards";
 import { resultsOf } from "./formResults";
 import { SST_LIBRARY } from "./sst_library";
-import { SST_DASHBOARD, SST_RESULTS } from "./sst_library/results";
+import {
+  type LibraryDashboardTab,
+  type LibraryResult,
+  SST_DASHBOARD,
+  SST_RESULTS,
+} from "./sst_library/results";
+import { formKind, formSections } from "./lib/form_validators";
+import {
+  WIDGET_HEIGHTS,
+  WIDGET_SIZES,
+  resultConfig,
+} from "./lib/result_validators";
 import {
   LIBRARY_REFERENCE_PREFIX,
   type LibraryEntry,
@@ -204,28 +215,38 @@ async function republish(
  * el proyecto todavía no tiene tablero, el de la biblioteca. Un resultado que
  * ya está —mismo formato y mismo nombre— no se vuelve a crear, y un tablero
  * que alguien armó no se pisa.
+ *
+ * Salvo que quien administra el deployment lo pida: con `update`, un
+ * resultado que ya está y cuya definición cambió en la biblioteca se pone al
+ * día; con `resetDashboard`, el tablero se sustituye por el de la biblioteca.
  */
 async function installResults(
   ctx: MutationCtx,
   project: Doc<"projects">,
   installed: Map<string, Installed>,
+  library: Pick<Library, "results" | "dashboard">,
+  options: { update: boolean; resetDashboard: boolean },
 ) {
   const ids = new Map<string, Id<"formResults">>();
   let created = 0;
+  let updated = 0;
   // Las cifras compuestas van al final: nombran otros resultados de la
   // biblioteca, que para entonces ya tienen su identificador.
   const ordered = [
-    ...SST_RESULTS.filter((library) => library.config.type !== "composite"),
-    ...SST_RESULTS.filter((library) => library.config.type === "composite"),
+    ...library.results.filter((result) => result.config.type !== "composite"),
+    ...library.results.filter((result) => result.config.type === "composite"),
   ];
   for (const library of ordered) {
     const formId = installed.get(library.form)?.formId;
     if (!formId) continue;
     const existing = await resultsOf(ctx, formId);
+    // Un resultado que la biblioteca renombró se reconoce por su nombre de
+    // antes: si no, ponerlo al día crearía otro igual.
+    const names = [library.name, ...(library.previousNames ?? [])];
     const already = existing.find((result) =>
-      isSameName(result.name, library.name),
+      names.some((name) => isSameName(result.name, name)),
     );
-    if (already) {
+    if (already && !options.update) {
       ids.set(library.key, already._id);
       continue;
     }
@@ -244,6 +265,17 @@ async function installResults(
       }
       config = { ...config, terms };
     }
+    if (already) {
+      ids.set(library.key, already._id);
+      if (
+        !isSameValue(already.config, config) ||
+        already.name !== library.name
+      ) {
+        await ctx.db.patch(already._id, { name: library.name, config });
+        updated += 1;
+      }
+      continue;
+    }
     ids.set(
       library.key,
       await ctx.db.insert("formResults", {
@@ -258,45 +290,69 @@ async function installResults(
   }
 
   let dashboard = false;
-  if (!(await dashboardOf(ctx, project._id))) {
-    await ctx.db.insert("dashboards", {
-      projectId: project._id,
-      tabs: SST_DASHBOARD.map((tab) => ({
-        id: tab.id,
-        label: tab.label,
-        widgets: tab.widgets.flatMap((widget, index) => {
-          const resultId = ids.get(widget.result);
-          return resultId
-            ? [{ id: `${tab.id}-${index}`, resultId, size: widget.size }]
-            : [];
-        }),
-      })),
-    });
+  const current = await dashboardOf(ctx, project._id);
+  if (!current || options.resetDashboard) {
+    const tabs = library.dashboard.map((tab) => ({
+      id: tab.id,
+      label: tab.label,
+      widgets: tab.widgets.flatMap((widget, index) => {
+        const resultId = ids.get(widget.result);
+        return resultId
+          ? [
+              {
+                id: `${tab.id}-${index}`,
+                resultId,
+                size: widget.size,
+                ...(widget.height ? { height: widget.height } : {}),
+              },
+            ]
+          : [];
+      }),
+    }));
+    if (current) await ctx.db.patch(current._id, { tabs });
+    else await ctx.db.insert("dashboards", { projectId: project._id, tabs });
     dashboard = true;
   }
-  return { created, dashboard };
+  return { created, updated, dashboard };
 }
 
-export const installSst = internalMutation({
-  args: {
-    projectId: v.id("projects"),
-    /** Instala además los elementos **ficticios** de los listados. */
-    withSamples: v.optional(v.boolean()),
-    /** A lo ya instalado cuya definición cambió en la biblioteca le publica
-     *  una versión nueva. Las respuestas de la anterior se siguen leyendo con
-     *  la anterior (diseño §2). Un formato con cambios sin publicar no se
-     *  toca: son de alguien. */
-    update: v.optional(v.boolean()),
-  },
-  returns: v.object({
-    created: v.array(v.string()),
-    updated: v.array(v.string()),
-    skipped: v.array(v.string()),
-    entries: v.number(),
-    /** Cuántos resultados se crearon, y si se instaló el tablero. */
-    results: v.object({ created: v.number(), dashboard: v.boolean() }),
+/** Una biblioteca: sus formatos, lo que entregan y el tablero con que se
+ *  instala. La de SST vive en `convex/sst_library/`; cualquier otra llega
+ *  como argumento de `install`. */
+interface Library {
+  /** Como se nombra en la auditoría: «Biblioteca de formatos SST». */
+  name: string;
+  forms: readonly LibraryForm[];
+  results: readonly LibraryResult[];
+  dashboard: readonly LibraryDashboardTab[];
+}
+
+interface InstallOptions {
+  projectId: Id<"projects">;
+  withSamples?: boolean;
+  update?: boolean;
+  resetDashboard?: boolean;
+}
+
+const installReturns = v.object({
+  created: v.array(v.string()),
+  updated: v.array(v.string()),
+  skipped: v.array(v.string()),
+  entries: v.number(),
+  /** Cuántos resultados se crearon, cuántos se pusieron al día y si se
+   *  instaló el tablero. */
+  results: v.object({
+    created: v.number(),
+    updated: v.number(),
+    dashboard: v.boolean(),
   }),
-  handler: async (ctx, args) => {
+});
+
+async function installLibrary(
+  ctx: MutationCtx,
+  args: InstallOptions,
+  source: Library,
+) {
     const project = await ctx.db.get(args.projectId);
     if (!project) throw new ConvexError("Proyecto no encontrado");
 
@@ -311,7 +367,7 @@ export const installSst = internalMutation({
     const skipped: string[] = [];
     let entries = 0;
 
-    for (const library of SST_LIBRARY) {
+    for (const library of source.forms) {
       const already = findInstalled(existing, library);
       if (already) {
         installed.set(library.key, { formId: already._id, entries: new Map() });
@@ -371,6 +427,7 @@ export const installSst = internalMutation({
         publishedVersionNumber: 1,
         hasDraftChanges: false,
         referencedFormIds: deriveReferencedForms(ctx, sections),
+        ...(library.kind === "tracking" ? library.tracking : {}),
       });
 
       const record: Installed = { formId, entries: new Map() };
@@ -421,11 +478,31 @@ export const installSst = internalMutation({
       await ctx.db.patch(formId, { responseCount: record.entries.size });
     }
 
-    const results = await installResults(ctx, project, installed);
+    const results = await installResults(ctx, project, installed, source, {
+      update: args.update ?? false,
+      resetDashboard: args.resetDashboard ?? false,
+    });
+
+    if (results.updated > 0 || (results.dashboard && args.resetDashboard)) {
+      await writeSystemLog(ctx, {
+        description: `${source.name}: ${[
+          results.updated > 0
+            ? `${results.updated} ${results.updated === 1 ? "resultado puesto" : "resultados puestos"} al día`
+            : null,
+          results.dashboard ? "tablero sustituido por el de la biblioteca" : null,
+        ]
+          .filter(Boolean)
+          .join(" y ")}`,
+        type: "update",
+        projectId: args.projectId,
+        affectedEntityType: "project",
+        affectedEntityId: args.projectId,
+      });
+    }
 
     if (updated.length > 0) {
       await writeSystemLog(ctx, {
-        description: `Biblioteca de formatos SST actualizada: ${updated.join(", ")}`,
+        description: `${source.name} actualizada: ${updated.join(", ")}`,
         type: "update",
         projectId: args.projectId,
         affectedEntityType: "project",
@@ -435,7 +512,7 @@ export const installSst = internalMutation({
 
     if (created.length > 0) {
       await writeSystemLog(ctx, {
-        description: `Biblioteca de formatos SST instalada: ${created.length} formatos y listados`,
+        description: `${source.name} instalada: ${created.length} formatos y listados`,
         type: "create",
         projectId: args.projectId,
         affectedEntityType: "project",
@@ -444,5 +521,106 @@ export const installSst = internalMutation({
     }
 
     return { created, updated, skipped, entries, results };
+}
+
+export const installSst = internalMutation({
+  args: {
+    projectId: v.id("projects"),
+    /** Instala además los elementos **ficticios** de los listados. */
+    withSamples: v.optional(v.boolean()),
+    /** A lo ya instalado cuya definición cambió en la biblioteca le publica
+     *  una versión nueva. Las respuestas de la anterior se siguen leyendo con
+     *  la anterior (diseño §2). Un formato con cambios sin publicar no se
+     *  toca: son de alguien. Y a un resultado de la biblioteca que ya está y
+     *  cambió en ella lo pone al día. */
+    update: v.optional(v.boolean()),
+    /** Sustituye el tablero del proyecto por el de la biblioteca. Sin él, un
+     *  tablero que ya existe no se toca. */
+    resetDashboard: v.optional(v.boolean()),
   },
+  returns: installReturns,
+  handler: async (ctx, args) =>
+    await installLibrary(ctx, args, {
+      name: "Biblioteca de formatos SST",
+      forms: SST_LIBRARY,
+      results: SST_RESULTS,
+      dashboard: SST_DASHBOARD,
+    }),
+});
+
+/**
+ * Instala en un proyecto una biblioteca que llega **como dato**: los formatos
+ * y listados de una empresa, lo que entregan y su tablero, escritos en un
+ * archivo.
+ *
+ * Es lo que deja montar el sistema de una empresa sin que nada suyo viva en
+ * el código: `bunx convex run formLibrary:install "$(cat biblioteca.json)"`.
+ * La forma es la de la biblioteca SST (`sst_library/types.ts`), con las
+ * mismas reglas: `validateForm` tiene que aceptar cada formato, una relación
+ * nombra su listado con `@clave`, y lo que ya está instalado no se repite.
+ * Interna, como `installSst`, y por lo mismo.
+ */
+export const install = internalMutation({
+  args: {
+    projectId: v.id("projects"),
+    update: v.optional(v.boolean()),
+    resetDashboard: v.optional(v.boolean()),
+    library: v.object({
+      name: v.string(),
+      forms: v.array(
+        v.object({
+          key: v.string(),
+          kind: formKind,
+          name: v.string(),
+          code: v.optional(v.string()),
+          category: v.string(),
+          description: v.optional(v.string()),
+          titleFieldId: v.optional(v.string()),
+          tracking: v.optional(
+            v.object({
+              dueDateFieldId: v.optional(v.string()),
+              responsibleFieldId: v.optional(v.string()),
+              numberPrefix: v.optional(v.string()),
+            }),
+          ),
+          sections: formSections,
+        }),
+      ),
+      results: v.array(
+        v.object({
+          key: v.string(),
+          form: v.string(),
+          name: v.string(),
+          previousNames: v.optional(v.array(v.string())),
+          config: resultConfig,
+        }),
+      ),
+      dashboard: v.array(
+        v.object({
+          id: v.string(),
+          label: v.string(),
+          widgets: v.array(
+            v.object({
+              result: v.string(),
+              size: v.union(...WIDGET_SIZES.map((size) => v.literal(size))),
+              height: v.optional(
+                v.union(...WIDGET_HEIGHTS.map((height) => v.literal(height))),
+              ),
+            }),
+          ),
+        }),
+      ),
+    }),
+  },
+  returns: installReturns,
+  handler: async (ctx, args) =>
+    await installLibrary(
+      ctx,
+      {
+        projectId: args.projectId,
+        update: args.update,
+        resetDashboard: args.resetDashboard,
+      },
+      args.library,
+    ),
 });

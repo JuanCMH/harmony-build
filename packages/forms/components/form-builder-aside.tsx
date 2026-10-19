@@ -19,13 +19,17 @@ import type { CatalogNames } from "../lib/field-config-text";
 import { describeCondition } from "../lib/field-rules";
 import { useSectionSheet } from "../store/use-section-sheet";
 import { CatalogTitleField } from "./catalog-title-field";
+import { type TrackingDeclared, TrackingSettings } from "./tracking-settings";
 import { ConfigBlock, FormFieldConfig, StatusRow } from "./form-field-config";
 import { FormFieldPalette } from "./form-field-palette";
 import { FormRulesSummary } from "./form-rules-summary";
 
 /** Lo que el listado necesita para elegir su campo de título. */
 export interface CatalogTitleProps {
+  kind: "catalog" | "tracking";
   formId: Id<"forms">;
+  /** Sólo en un seguimiento: lo que ya tiene declarado. */
+  tracking?: TrackingDeclared;
   titleFieldId: string | undefined;
   savedDraft: readonly FormSection[];
   published: readonly FormSection[] | null;
@@ -162,6 +166,16 @@ export const FormBuilderAside = ({
             {...catalogTitle}
             hasUnsavedChanges={hasUnsavedChanges}
           />
+          {catalogTitle.kind === "tracking" ? (
+            <>
+              <Separator className="opacity-40" />
+              <TrackingSettings
+                formId={catalogTitle.formId}
+                declared={catalogTitle.tracking ?? {}}
+                savedDraft={catalogTitle.savedDraft}
+              />
+            </>
+          ) : null}
         </>
       ) : null}
 

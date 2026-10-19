@@ -24,14 +24,25 @@ El módulo de formatos está implementado según
 `docs/plans/2026-09-28-modulo-de-formatos-design.md`. Su biblioteca de formatos
 SST vive en `convex/sst_library/` y se instala en un proyecto con
 `bunx convex run formLibrary:installSst '{"projectId":"…","withSamples":true}'`
-(`"update":true` publica una versión nueva de lo que cambió en la biblioteca).
+(`"update":true` publica una versión nueva de lo que cambió en la biblioteca y
+pone al día sus resultados; `"resetDashboard":true` sustituye el tablero del
+proyecto por el de la biblioteca).
 
 Los resultados de los formatos y el tablero del proyecto están implementados
 según `docs/plans/2026-10-09-resultados-y-tablero-design.md`. `installSst`
 instala también los resultados y el tablero de la biblioteca
 (`convex/sst_library/results.ts`): no repite un resultado que ya está ni pisa
 un tablero existente. Las respuestas de demostración se siembran con
-`bunx convex run demoData:seedDay` (`04-reglas-testing §7`).
+`bunx convex run demoData:seedDay`, y los asuntos de un seguimiento con
+`demoData:seedIssues` (`04-reglas-testing §7`).
+
+El programa de inspecciones, el resultado de seguimiento, el seguimiento de
+hallazgos de la biblioteca y su tablero de siete pestañas están implementados
+según `docs/plans/2026-10-12-programa-y-cierre-de-hallazgos-design.md`.
+
+Las tarjetas de resultados tienen tamaños de widget —cuatro anchos y tres
+altos en una retícula de pisos— y su contenido se adapta al alto, según
+`docs/plans/2026-10-14-tablero-a-la-medida-design.md` (`03 §1.3`).
 
 <!-- convex-ai-start -->
 

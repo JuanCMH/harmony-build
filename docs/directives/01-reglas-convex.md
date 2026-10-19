@@ -94,6 +94,7 @@ tienen. Casos vigentes:
 | `convex/permissions.ts` | `permissionsSchema` en el schema y en los `args` de `roles.*` | `packages/roles/lib/permissions.ts`, **sólo con `import type`** (§5.3) |
 | `convex/lib/result_types.ts`, `result_definition.ts` | `formResults.create` y `update` validan la definición con `resultProblem`; `compute` dice con ella qué resultado quedó sin su campo | el editor de resultados ofrece los mismos tipos, operaciones y campos, y valida antes de enviar (`packages/forms/lib/result-draft.ts`) |
 | `convex/lib/date_buckets.ts` | `result_compute.ts` agrupa por día, semana o mes; `formResults.compute` mide el rango | `packages/forms/lib/results-range.ts` calcula los atajos del rango |
+| `convex/lib/import_types.ts` | `formImports.writeBatch` resuelve cada fila con `importSections`: lo que una importación no exige | `packages/forms/lib/import-rows.ts` revisa las filas con las mismas secciones antes de enviarlas; los límites (`IMPORT_LIMITS`) son los mismos en los dos lados |
 
 La razón es la de §5: si la regla vive dos veces, una de las dos se queda atrás,
 y la que se queda atrás siempre es la del servidor. Esto **no** relaja §2: sigue
@@ -138,9 +139,16 @@ convex/
 │                           #   y las lecturas (§5.5)
 ├── formResults.ts          # los resultados de un formato: definirlos y
 │                           #   calcularlos para un rango de fechas (§6)
+├── formImports.ts          # importar registros desde un archivo: empezar,
+│                           #   escribir por lotes, cerrar y deshacer (§5.6)
+├── formTrackings.ts        # los asuntos de un seguimiento: abrir, completar
+│                           #   una etapa y la bandeja
+├── formDigests.ts          # reconstruir los resúmenes diarios de un
+│                           #   formato; sólo funciones internas (§7.3)
 ├── dashboards.ts           # el tablero del proyecto: leerlo y guardarlo
 ├── formLibrary.ts          # `installSst`, interna: instala la biblioteca
-│                           #   SST, con sus resultados y su tablero
+│                           #   SST, con sus resultados y su tablero; con
+│                           #   `update` y `resetDashboard` los pone al día
 ├── demoData.ts             # siembra de demostración; sólo funciones
 │                           #   internas (`04 §7`)
 ├── users.ts                # perfil del propio usuario
@@ -157,12 +165,24 @@ convex/
 │   ├── dates.ts            #   todayInColombia
 │   ├── date_buckets.ts     #   fechas de negocio agrupadas por día, semana
 │   │                       #     o mes; puro
-│   ├── result_types.ts     #   los nueve tipos de resultado, sus piezas, sus límites y lo
+│   ├── response_digest.ts  #   lo que un resultado necesita de una
+│   │                       #     respuesta: su resumen; puro
+│   ├── form_digests.ts     #   `digestAdd`, `digestRemove`, `digestRange`:
+│   │                       #     mantener y leer los resúmenes diarios
+│   ├── tracking.ts         #   etapas, consecutivo y «vencido» de un asunto
+│   │                       #     de seguimiento; puro (§2.2)
+│   ├── import_types.ts     #   lo que una importación exige y lo que
+│   │                       #     perdona, y sus límites; puro (§2.2)
+│   ├── result_types.ts     #   los once tipos de resultado, sus piezas, sus límites y lo
 │   │                       #     que devuelve cada uno; puro (§2.2)
 │   ├── result_definition.ts#   qué puede pedir un resultado de un formato:
 │   │                       #     `resultProblem`, `resultName`; puro (§2.2)
 │   ├── result_compute.ts   #   `computeResult`: de las respuestas de un
 │   │                       #     rango a lo que pinta una gráfica; puro
+│   ├── result_coverage.ts  #   el programa: si se inspeccionó todo lo que
+│   │                       #     tocaba; puro
+│   ├── result_tracking.ts  #   el seguimiento: si se cierra lo que se
+│   │                       #     abre; puro
 │   ├── result_validators.ts#   validadores de `formResults.config` y de
 │   │                       #     `dashboards.tabs`; `WIDGET_SIZES`
 │   └── text.ts             #   normalizeText, isSameName
@@ -351,7 +371,7 @@ así que sustituye al gate de lectura, no se suma a él.
 | Cambiar `members.role` (ascender a administrador o degradar), expulsar a un administrador | llave **más** `isProjectAdmin` | Ver el aviso de escalada, abajo. |
 | `members.remove` sobre uno mismo | sólo pertenencia | Salir por cuenta propia no pide llave. |
 | `users.updateName`, `users.updateImage`, `users.current` | sólo sesión | Es el perfil de quien llama; el `userId` sale de la sesión. |
-| `formLibrary.installSst`, `demoData.seedDay`, `writeDay`, `filesFor` | **internas** (`internalMutation`, `internalAction`, `internalQuery`) | No tienen sesión ni llave: las ejecuta quien administra el deployment con `bunx convex run`, y la aplicación no las alcanza. No son una superficie sin sesión (§5.7). |
+| `formLibrary.installSst`, `demoData.seedDay`, `writeDay`, `filesFor`, `seedIssues`, `formImports.purge`, `formDigests.rebuild`, `rebuildProject` | **internas** (`internalMutation`, `internalAction`, `internalQuery`) | No tienen sesión ni llave: las ejecuta quien administra el deployment con `bunx convex run`, y la aplicación no las alcanza. No son una superficie sin sesión (§5.7). |
 
 > [!CAUTION]
 > `checkPermission` es `async`. **Sin `await` devuelve una `Promise`, que es
@@ -374,7 +394,7 @@ así que sustituye al gate de lectura, no se suma a él.
 
 ### 5.3 Las llaves
 
-Quince, todas `v.boolean()` **obligatorias**, tal como viven en
+Dieciséis, todas `v.boolean()` **obligatorias**, tal como viven en
 `convex/permissions.ts`. No hay llaves opcionales ni retiradas: el proyecto nace
 sin documentos previos, así que no hay rol que pueda carecer de una.
 
@@ -400,12 +420,13 @@ sin documentos previos, así que no hay rol que pueda carecer de una.
 | | `assignRoles` | `members.update`: asignar o quitar un rol personalizado. |
 | **Auditoría** | `viewLogs` | `logs.getByProject`, `logs.getLogDetails`. |
 | **Formatos** | `createForms` | `forms.create`, `forms.duplicate`. |
-| | `editForms` | `formVersions.saveDraft`, `publish`, `discardDraft`, `getDraft`; `forms.updateDetails`, `setTitleField`; `formCategories.*`; `forms.listCatalogs`; `formResults.create`, `update`, `remove`. |
+| | `editForms` | `formTrackings.configure`; `formVersions.saveDraft`, `publish`, `discardDraft`, `getDraft`; `forms.updateDetails`, `setTitleField`; `formCategories.*`; `forms.listCatalogs`; `formResults.create`, `update`, `remove`. |
 | | `deleteForms` | `forms.archive`, `unarchive`, `remove`. |
-| | `fillForms` | `formResponses.submit` (con la audiencia del formato), `formFiles.generateUploadUrl`, `formEntries.searchEntries`. Sin `viewResponses`, `formResponses.list` devuelve sólo las propias. |
+| | `fillForms` | `formTrackings.open` y `completeStage` (con la audiencia del seguimiento); sin `viewResponses`, `formTrackings.list` devuelve sólo los asuntos propios. `formResponses.submit` (con la audiencia del formato), `formFiles.generateUploadUrl`, `formEntries.searchEntries`. Sin `viewResponses`, `formResponses.list` devuelve sólo las propias. |
 | | `viewResponses` | `formResponses.list` y `getById` de las respuestas de todos; `formEntries.listEntries`, `listEntryHistory`; `formResults.compute` y `dashboards.get`, que son agregados de ellas. |
 | | `voidResponses` | `formResponses.void`. |
 | | `editCatalogs` | `formEntries.createEntry`, `updateEntry`, `setEntryActive`; lectura de todos los elementos de un listado, y con ella `formResults.compute` sobre un listado. |
+| | `importResponses` | `formImports.start`, `writeBatch`, `finish`, `revert`, `entryTitles`: importar respuestas en un formato y elementos en un listado, y deshacer una importación. No pide `fillForms` ni `editCatalogs`: importar no es diligenciar. `formImports.list` la admite junto a la llave de ver las respuestas. |
 
 Quien tiene `createForms`, `editForms` o `deleteForms` ve además los
 borradores. Las reglas de acceso completas del módulo están en
@@ -433,7 +454,7 @@ Al añadir una llave nueva:
 
 #### Llaves que sólo gobiernan la UI
 
-**Ninguna hoy.** Las quince tienen su comprobación en el servidor.
+**Ninguna hoy.** Las dieciséis tienen su comprobación en el servidor.
 
 La categoría existe y es legítima: una llave puede corresponder a una
 **pantalla que compone operaciones ya gateadas por separado** y no a un
@@ -533,8 +554,15 @@ entero se descarta. Lo que **no** vale es comprobar una vez fuera del bucle.
 Una `action` no toca la base: su comprobación vive en un `internalQuery` que
 recibe el lote completo y devuelve el ámbito de cada elemento.
 
-Hoy ninguna mutation del proyecto recibe lotes. La regla está aquí para que la
-primera que lo haga —previsiblemente, en el módulo de formatos— nazca bien.
+La única mutation que recibe un arreglo es `formImports.writeBatch`, y lo
+cumple de otra manera: **ninguna fila trae ámbito**. El formato y el proyecto
+salen de la importación (`formImports`), que se comprobó al empezarla y se
+vuelve a comprobar en cada lote; cada relación de cada fila demuestra además
+que su elemento es del listado y del proyecto (`resolveValues`). Lo que sí
+cambia frente a la regla de arriba es el fallo: una fila que no pasa la
+validación **no descarta el lote**, vuelve con su motivo. Eso vale porque lo
+que falla es un dato, no un ámbito; un problema de ámbito sigue tumbándolo
+todo.
 
 ### 5.7 Funciones sin sesión y Server Actions
 
@@ -625,13 +653,18 @@ evitarlo, por orden de preferencia:
    **cálculo** acotado: `formResults.compute` lee las respuestas de un formato
    dentro del rango de fechas (forma 1, índice `formId_date`), hasta 300
    (`RESPONSES_CAP`) y con un rango de 400 días como mucho, y devuelve
-   `capped: true` cuando las cifras son de una parte del rango.
+   `capped: true` cuando las cifras son de una parte del rango. Hoy es el
+   camino de un formato cuyos resúmenes no están al día y el de un
+   **seguimiento**, cuyos asuntos cambian después de abrirse y por eso no
+   tienen resumen: hasta 300 abiertos en el rango y hasta 500 abiertos hoy,
+   que se leen por estado. Un **programa** lee además los elementos activos
+   del listado que relaciona, hasta 500.
 4. **Un resumen mantenido al escribir** (un agregado, o una tabla derivada que
-   se actualiza en la misma transacción que el dato). Hoy no existe ninguno.
-   Es el paso siguiente previsto para los resultados, cuando un formato toque
-   el tope de la forma 3: un resumen diario por formato
-   (`docs/plans/2026-10-09-resultados-y-tablero-design.md §9`). Entra con su
-   plan, cumple §7.3 y actualiza `00 §5` si trae una dependencia.
+   se actualiza en la misma transacción que el dato). El caso vivo son los
+   **resúmenes diarios** de un formato (`formDayDigests`): lo que un
+   resultado necesita de cada respuesta, por formato y día. De ellos calcula
+   `formResults.compute` hasta 12.000 respuestas por rango
+   (`docs/plans/2026-10-10-resumenes-de-resultados-design.md`). Cumple §7.3.
 
 `.collect()` sin acotar queda reservado a conjuntos que **no** crecen con la
 operación: los miembros y los roles de un proyecto.
@@ -732,14 +765,17 @@ Derivada del schema, padre por padre. «Anular» significa `patch` del campo a
 | Padre | Hijos que cascadean | Hijos que se anulan |
 |---|---|---|
 | `projects` | `members`, `roles`, `logs`, `formResults`, `dashboards`, su `logo` en `_storage` | — |
-| `forms` | `formResults` *(y sus `formVersions`; un formato con respuestas no se elimina, se archiva)* | — |
+| `forms` | `formResults`, `formImports` *(y sus `formVersions`; un formato con respuestas no se elimina, se archiva)* | — |
+| `formImports` | Al **deshacerla** (`revert`), las `formResponses` que creó, con sus `formResponseLinks`; en un listado se conserva el elemento que alguna respuesta ya eligió, sin la marca | `formResponses.importId` *(si el registro desaparece con su proyecto, la respuesta se va con él; el campo es opcional para lo que no se importó)* |
 | `formResults` | — *(un widget de `dashboards.tabs` que lo señala deja de leerse: `dashboards.get` lo filtra)* | — |
 | `roles` | — | `members.customRoleId` |
 | `members` | — | — *(los `logs` que lo nombran se conservan)* |
 | `users` | *(fuera de alcance: identidad, no dominio)* | — |
 
-`formResults` y `dashboards` cuelgan de `projectId` y están en la lista de
-tablas ligeras de `purgeProjectData` (`LIGHT_TABLES`, `convex/projects.ts`).
+`formDayDigests` cuelga de `projectId` y de su formato, y la purga la drena
+aparte, de pocos en pocos, porque sus documentos pesan.
+`formResults`, `formImports` y `dashboards` cuelgan de `projectId` y están en
+la lista de tablas ligeras de `purgeProjectData` (`LIGHT_TABLES`, `convex/projects.ts`).
 El resto de las tablas del módulo de formatos —`formCategories`,
 `formVersions`, `formResponses`, `formResponseLinks`— está en la purga y
 todavía no en esta tabla.
@@ -805,6 +841,13 @@ Casos vivos en Harmony Build:
   para autorizar es la fila `owner` de `members` (`isProjectOwner`);
   `projects.transfer` mueve las dos en la misma mutation, y es el único sitio
   que las toca.
+- **`formDayDigests`** resume las respuestas vigentes de un formato por día.
+  La fuente es `formResponses`. Lo mantienen `digestAdd` y `digestRemove`
+  (`convex/lib/form_digests.ts`), y **toda mutation que escriba, anule o
+  retire una respuesta de un formato tiene que llamarlas**. La regla de qué
+  entra es `convex/lib/response_digest.ts`; si cambia, sube `DIGEST_VERSION`
+  y se reconstruye con `formDigests.rebuild`. Mientras `forms.digestVersion`
+  no coincide, los resultados se calculan leyendo las respuestas.
 - **`logs.userName`** es una *instantánea* del nombre del autor en el momento
   de escribir, no una copia que se mantenga: si la persona cambia de nombre, la
   auditoría conserva el que firmó. Es deliberado —un registro dice lo que pasó—

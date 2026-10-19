@@ -28,6 +28,7 @@ export const CATEGORY = {
   emergency: "Inspecciones de emergencia",
   supplies: "Dotación",
   management: "Gestión SST",
+  tracking: "Seguimiento",
 } as const;
 
 /** Las tres capacidades de extintor que trae el papel. */

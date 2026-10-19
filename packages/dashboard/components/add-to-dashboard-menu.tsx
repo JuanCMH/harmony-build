@@ -8,6 +8,7 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
+import { DEFAULT_WIDGET } from "@/convex/lib/widget_layout";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { ResultType } from "@/convex/lib/result_types";
 import { handleConvexErrorCallback } from "@/lib/convex-error-handler";
@@ -18,7 +19,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { useGetDashboard, useSaveDashboard } from "../api";
-import { DASHBOARD_ROOM, DEFAULT_SIZE } from "../lib/dashboard-draft";
+import { DASHBOARD_ROOM } from "../lib/dashboard-draft";
 
 interface AddToDashboardMenuProps {
   resultId: Id<"formResults">;
@@ -53,9 +54,10 @@ export const AddToDashboardMenu = ({
       id: widget.id,
       resultId: widget.resultId,
       size: widget.size,
+      height: widget.height,
     })),
   }));
-  const widget = { id: newId(), resultId, size: DEFAULT_SIZE[type] };
+  const widget = { id: newId(), resultId, ...DEFAULT_WIDGET[type] };
 
   const addTo = (tabId: string | null) => {
     const newTabId = newId();

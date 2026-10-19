@@ -6,7 +6,6 @@
  *  sólo decide **qué** respuestas entran.
  */
 
-import { answerableItems } from "./checklist_summary";
 import {
   type Bucket,
   bucketStart,
@@ -30,14 +29,19 @@ import {
   type ResultConfig,
   type ResultData,
 } from "./result_types";
+import { computeCoverage } from "./result_coverage";
+import { type ComputedIssue, computeTracking } from "./result_tracking";
+import { isChecklistTally, tallyChecklist } from "./response_digest";
 import { isReferenceValue } from "./stored_values";
 import { isRealDate } from "./value_validation";
 
 /** Una respuesta vigente, con su fecha de negocio. Llegan en el orden en que
- *  se registraron: «el último» es el del final. */
+ *  se registraron: «el último» es el del final. En un seguimiento, cada una
+ *  es un asunto y lleva lo suyo en `issue`. */
 export interface ComputedResponse {
   date: string;
   values: FormValues;
+  issue?: ComputedIssue;
 }
 
 /** Un elemento activo de un listado. */
@@ -53,6 +57,13 @@ export interface ComputeInput {
   responses: readonly ComputedResponse[];
   /** Sólo para `expirations`. */
   entries?: readonly ComputedEntry[];
+  /** Sólo para `coverage`: los elementos activos del listado que elige cada
+   *  relación, por id de campo. */
+  subjects?: ReadonlyMap<string, readonly ComputedEntry[]>;
+  /** Sólo para `tracking`: todos los asuntos abiertos hoy. Los que se
+   *  abrieron en el periodo van además en `responses`, que es de lo que
+   *  calculan los demás tipos sobre un seguimiento. */
+  openIssues?: readonly ComputedIssue[];
   range: { from: string; to: string };
   /** El día de hoy en Colombia: lo pone quien llama, no el reloj. */
   today: string;
@@ -191,10 +202,10 @@ const measured = (
       );
 
 /** Las respuestas que cumplen **todas** las condiciones del resultado. */
-const filtered = (
-  responses: readonly ComputedResponse[],
+const filtered = <R extends { values: FormValues }>(
+  responses: readonly R[],
   filters: readonly VisibilityRule[] | undefined,
-): readonly ComputedResponse[] =>
+): readonly R[] =>
   !filters || filters.length === 0
     ? responses
     : responses.filter((response) =>
@@ -263,27 +274,41 @@ const checklistOf = (
 ): ChecklistConfig | undefined =>
   fields.find((field) => field.id === fieldId)?.config.checklist;
 
-/** Cuántos ítems de cada sentido tiene una respuesta, y cuáles fallaron. */
+/** Cuántos ítems de cada sentido tiene una respuesta, y cuáles fallaron. Una
+ *  respuesta que llega de un resumen (`response_digest.ts`) ya viene contada,
+ *  con la escala de su propia versión. */
 function tally(config: ChecklistConfig, answers: unknown) {
-  const meaning = new Map(
-    config.options.map((option) => [option.value, option.meaning]),
+  if (isChecklistTally(answers)) return answers;
+  return tallyChecklist(
+    config,
+    Array.isArray(answers) ? (answers as ChecklistAnswer[]) : [],
   );
-  const answerable = new Set(answerableItems(config).map((item) => item.id));
-  let ok = 0;
-  const failed: string[] = [];
-  for (const answer of Array.isArray(answers)
-    ? (answers as ChecklistAnswer[])
-    : []) {
-    if (!answerable.has(answer.itemId) || answer.value === undefined) continue;
-    const sense = meaning.get(answer.value);
-    if (sense === "ok") ok += 1;
-    if (sense === "fail") failed.push(answer.itemId);
-  }
-  return { ok, failed };
 }
 
 const percentOf = (ok: number, fail: number): number | null =>
   ok + fail === 0 ? null : (ok / (ok + fail)) * 100;
+
+/**
+ * El intervalo de las mini columnas de un indicador. Un mes cabe por días;
+ * más, por semanas. Y un formato que se llena una vez por semana —un informe
+ * de horas— va por semanas aunque el rango sea corto: por días serían treinta
+ * columnas con cuatro rayas sueltas.
+ */
+export function sparkInterval(
+  responses: readonly ComputedResponse[],
+  range: { from: string; to: string },
+): Bucket {
+  const interval = fitBucket(
+    daysBetween(range.from, range.to) < 31 ? "day" : "week",
+    range.from,
+    range.to,
+    RESULT_LIMITS.maxPoints,
+  );
+  if (interval !== "day") return interval;
+  const days = new Set(responses.map((response) => response.date)).size;
+  const weeks = bucketsBetween("week", range.from, range.to).length;
+  return days > 0 && days <= weeks ? "week" : "day";
+}
 
 /** Lo que pinta un resultado, a partir de las respuestas de un rango. */
 export function computeResult(
@@ -300,13 +325,7 @@ export function computeResult(
 
   switch (config.type) {
     case "indicator": {
-      // Un mes cabe por días; más, por semanas.
-      const interval = fitBucket(
-        daysBetween(range.from, range.to) < 31 ? "day" : "week",
-        range.from,
-        range.to,
-        RESULT_LIMITS.maxPoints,
-      );
+      const interval = sparkInterval(responses, range);
       const groups = byBucket(responses, interval);
       return {
         type: "indicator",
@@ -569,6 +588,23 @@ export function computeResult(
         ),
       };
     }
+
+    case "coverage":
+      return computeCoverage(config, {
+        responses,
+        entries: input.subjects?.get(config.byFieldId) ?? [],
+        range,
+        today: input.today,
+      });
+
+    case "tracking":
+      return computeTracking({
+        open: filtered(input.openIssues ?? [], filters),
+        opened: responses.flatMap((response) =>
+          response.issue ? [response.issue] : [],
+        ),
+        today: input.today,
+      });
 
     case "expirations": {
       const rows = (input.entries ?? [])

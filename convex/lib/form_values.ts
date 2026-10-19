@@ -357,6 +357,9 @@ export interface ResolveInput {
    *  pasar por la ventana de subida, y una relación que no cambia se conserva
    *  aunque el elemento elegido se haya inactivado después. */
   previous?: StoredValues;
+  /** Sólo al importar: se admite elegir un elemento inactivo. Lo que se
+   *  importa ya pasó, y pasó cuando ese vehículo todavía rodaba. */
+  allowInactive?: boolean;
 }
 
 /** Las relaciones que había en unos valores guardados, por elemento. */
@@ -544,7 +547,7 @@ export async function resolveValues(
       cache,
     });
     const kept = before.get(slot.value.responseId);
-    if (!composed || (!composed.active && !kept)) {
+    if (!composed || (!composed.active && !kept && !input.allowInactive)) {
       throw new ConvexError(formResponsesErrors.referenceInvalid(slot.label));
     }
 
@@ -595,6 +598,24 @@ export async function writeLinks(
       ...link,
     });
   }
+}
+
+/** Las filas de relación de un elemento que se volvió a guardar: fuera las que
+ *  tenía, dentro las que salen de sus valores de ahora. */
+export async function replaceLinks(
+  ctx: MutationCtx,
+  entry: Pick<
+    Doc<"formResponses">,
+    "_id" | "projectId" | "formId" | "date" | "submittedBy"
+  >,
+  links: readonly ResolvedLink[],
+) {
+  const current = await ctx.db
+    .query("formResponseLinks")
+    .withIndex("responseId", (q) => q.eq("responseId", entry._id))
+    .collect();
+  for (const link of current) await ctx.db.delete(link._id);
+  await writeLinks(ctx, entry, links);
 }
 
 /** Borra del almacenamiento los archivos que una respuesta dejó de nombrar.

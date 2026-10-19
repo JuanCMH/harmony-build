@@ -27,7 +27,7 @@ import { type FormEvent, useState } from "react";
 import { toast } from "sonner";
 
 import { useCreateForm, useGetFormCategories } from "../../api";
-import { ENTITY_ICONS } from "../../lib/field-catalog";
+import { KIND_ICON } from "../../lib/field-catalog";
 import { formRoutes } from "../../lib/routes";
 
 const FORM_ID = "create-form-form";
@@ -62,6 +62,14 @@ const KIND_OPTIONS: readonly {
     consequence:
       "Sus elementos se mantienen al día y otros formatos los eligen.",
   },
+  {
+    kind: "tracking",
+    title: "Seguimiento",
+    summary: "Lo que hay que resolver",
+    examples: "Una acción correctiva, un reporte de condición insegura.",
+    consequence:
+      "Cada asunto se abre, avanza por etapas y se cierra. Cada sección es una etapa.",
+  },
 ];
 
 const KIND_COPY: Record<
@@ -79,6 +87,13 @@ const KIND_COPY: Record<
     description: "Ponle nombre; sus campos se diseñan en el paso siguiente.",
     placeholder: "Ej.: Vehículos",
     created: "Listado creado correctamente",
+  },
+  tracking: {
+    title: "Crear seguimiento",
+    description:
+      "Ponle nombre; sus etapas y sus campos se diseñan en el paso siguiente.",
+    placeholder: "Ej.: Acciones correctivas",
+    created: "Seguimiento creado correctamente",
   },
 };
 
@@ -149,7 +164,7 @@ export const CreateFormModal = ({
       {step === "kind" ? (
         <>
           <HarmonyModalHeader
-            icon={ENTITY_ICONS.form}
+            icon={KIND_ICON.record}
             title="¿Qué vas a crear?"
             description="La clase se elige ahora y no se puede cambiar después."
           />
@@ -157,11 +172,11 @@ export const CreateFormModal = ({
             <div
               role="radiogroup"
               aria-label="Clase de formato"
-              className="grid gap-3 sm:grid-cols-2"
+              className="grid gap-3 sm:grid-cols-3"
             >
               {KIND_OPTIONS.map((option) => {
                 const Icon =
-                  ENTITY_ICONS[option.kind === "record" ? "form" : "catalog"];
+                  KIND_ICON[option.kind];
                 const isSelected = kind === option.kind;
                 return (
                   // Un botón con papel de radio, y no un `input`: la opción
@@ -225,7 +240,7 @@ export const CreateFormModal = ({
       ) : (
         <>
           <HarmonyModalHeader
-            icon={ENTITY_ICONS[kind === "record" ? "form" : "catalog"]}
+            icon={KIND_ICON[kind]}
             title={copy.title}
             description={copy.description}
           />

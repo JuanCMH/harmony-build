@@ -1,5 +1,6 @@
 import { toDate } from "@/packages/forms/lib/date-value";
 import type {
+  CoverageScope,
   HeatValue,
   MeasureKind,
   ResultGoal,
@@ -12,12 +13,14 @@ import {
   CalendarClock,
   ChartColumn,
   ChartLine,
+  CircleCheckBig,
   ClipboardCheck,
   Gauge,
   Grid3x3,
   Calculator,
   type LucideIcon,
   Table2,
+  Target,
   TriangleAlert,
 } from "lucide-react";
 
@@ -83,6 +86,18 @@ export const RESULT_CATALOG: Record<
     help: "Las fechas de los elementos activos del listado, la más próxima primero. No depende del periodo.",
     icon: CalendarClock,
   },
+  coverage: {
+    label: "Programa",
+    question: "¿Se inspeccionó todo lo que tocaba?",
+    help: "Las veces que se hizo sobre las que tocaba: cada elemento, cada día, semana o mes. Lo que está en curso, o lo que el periodo corta por la mitad, no cuenta como falta. Abajo, los menos cubiertos primero.",
+    icon: Target,
+  },
+  tracking: {
+    label: "Seguimiento",
+    question: "¿Se está cerrando lo que se abre?",
+    help: "Los abiertos y los vencidos son de hoy, sin mirar el periodo. El porcentaje es, de lo que se abrió en el periodo, cuánto está cerrado.",
+    icon: CircleCheckBig,
+  },
   composite: {
     label: "Cifra compuesta",
     question: "¿Cuánto da una cuenta entre indicadores?",
@@ -105,6 +120,29 @@ export const INTERVAL_LABEL: Record<ResultInterval, string> = {
   day: "Por día",
   week: "Por semana",
   month: "Por mes",
+};
+
+/** Cada cuánto le toca a cada elemento de un programa. */
+export const EVERY_LABEL: Record<ResultInterval, string> = {
+  day: "Cada día",
+  week: "Cada semana",
+  month: "Cada mes",
+};
+
+export const COVERAGE_SCOPE_LABEL: Record<CoverageScope, string> = {
+  catalog: "Todos los elementos activos del listado",
+  seen: "Sólo los que tienen alguna respuesta en el periodo",
+};
+
+/** Los días de la semana, del lunes (1) al domingo (7). */
+export const WEEKDAY_LABEL: Record<number, { short: string; long: string }> = {
+  1: { short: "L", long: "Lunes" },
+  2: { short: "M", long: "Martes" },
+  3: { short: "X", long: "Miércoles" },
+  4: { short: "J", long: "Jueves" },
+  5: { short: "V", long: "Viernes" },
+  6: { short: "S", long: "Sábado" },
+  7: { short: "D", long: "Domingo" },
 };
 
 export const HEAT_VALUE_LABEL: Record<HeatValue, string> = {

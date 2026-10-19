@@ -10,6 +10,8 @@ import {
   responseStatus,
   storedFieldValues,
 } from "./lib/form_validators";
+import { digestRows } from "./lib/digest_validators";
+import { IMPORT_MODES, IMPORT_STATUSES } from "./lib/import_types";
 import { dashboardTabs, resultConfig } from "./lib/result_validators";
 import { permissionsSchema } from "./permissions";
 
@@ -123,8 +125,22 @@ const schema = defineSchema({
     /** Opcional: el formato sobrevive a su categoría. */
     categoryId: v.optional(v.id("formCategories")),
     status: formStatus,
-    /** Sólo en listados: el campo que titula cada elemento. */
+    /** En un listado, el campo que titula cada elemento; en un seguimiento,
+     *  el que titula cada asunto. */
     titleFieldId: v.optional(v.string()),
+
+    /* Sólo en un seguimiento. */
+
+    /** El campo de fecha que dice hasta cuándo hay plazo: de él sale
+     *  «vencido». */
+    dueDateFieldId: v.optional(v.string()),
+    /** El campo de relación que dice quién responde por el asunto. */
+    responsibleFieldId: v.optional(v.string()),
+    /** Lo que antecede al consecutivo: «AC» en «AC-2026-014». */
+    numberPrefix: v.optional(v.string()),
+    /** El último consecutivo entregado, por año. */
+    lastNumber: v.optional(v.object({ year: v.number(), value: v.number() })),
+
     audience: formAudience,
     /** Los roles que lo diligencian cuando `audience` es `roles`. */
     audienceRoleIds: v.array(v.id("roles")),
@@ -150,6 +166,10 @@ const schema = defineSchema({
      *  versión publicada. Fuente: `formVersions.sections`. Es lo que permite
      *  saber quién usa un listado sin leer las secciones de todo el proyecto. */
     referencedFormIds: v.array(v.id("forms")),
+    /** La versión de la regla con que están hechos sus resúmenes diarios
+     *  (`formDayDigests`). Sin ella, o con otra, sus resultados se calculan
+     *  leyendo las respuestas, con tope, hasta reconstruirlos. */
+    digestVersion: v.optional(v.number()),
   })
     .index("projectId", ["projectId"])
     .index("projectId_kind", ["projectId", "kind"])
@@ -184,13 +204,18 @@ const schema = defineSchema({
     /** La versión con que se contestó. En un listado, la vigente cuando se
      *  guardó el elemento por última vez. */
     versionId: v.id("formVersions"),
-    /** La fecha de negocio, `YYYY-MM-DD` en Colombia. La pone el servidor. */
+    /** La fecha de negocio, `YYYY-MM-DD` en Colombia. La pone el servidor,
+     *  salvo en una respuesta importada, que trae la del hecho. */
     date: v.string(),
     submittedBy: v.id("users"),
     status: responseStatus,
     voidedBy: v.optional(v.id("users")),
     voidedAt: v.optional(v.number()),
     voidReason: v.optional(v.string()),
+    /** La importación que la trajo, si no se diligenció aquí. Es lo que la
+     *  distingue para siempre y lo que permite deshacerla. Opcional: una
+     *  respuesta sobrevive a que se purgue el registro de su importación. */
+    importId: v.optional(v.id("formImports")),
 
     /* Sólo en los elementos de un listado. */
 
@@ -204,15 +229,44 @@ const schema = defineSchema({
     updatedAt: v.optional(v.number()),
     updatedBy: v.optional(v.id("users")),
 
+    /* Sólo en los asuntos de un seguimiento. `title` y `titleSearch`, de
+     * arriba, los usan también. */
+
+    /** El consecutivo dentro de su formato y su año. */
+    number: v.optional(v.number()),
+    year: v.optional(v.number()),
+    /** Las etapas ya completadas, en orden: cada una es una sección de su
+     *  versión. La que toca es la siguiente a la última. */
+    stages: v.optional(
+      v.array(
+        v.object({
+          sectionId: v.string(),
+          completedBy: v.id("users"),
+          completedAt: v.number(),
+        }),
+      ),
+    ),
+    closedAt: v.optional(v.number()),
+    /** Derivados de `values` (`01 §7.3`), para la bandeja: la fecha de
+     *  compromiso y el nombre del responsable. */
+    dueDate: v.optional(v.string()),
+    responsibleLabel: v.optional(v.string()),
+
     values: storedFieldValues,
   })
     .index("projectId", ["projectId"])
     // El orden de creación da «lo más reciente primero».
     .index("formId", ["formId"])
-    // La fecha de negocio sale del instante de creación, así que ordenar por
-    // ella es ordenar por creación: los dos índices sirven con y sin rango.
+    // Por fecha de negocio. Una respuesta importada trae una fecha anterior a
+    // su creación, así que los listados ordenan por estos dos y no por el de
+    // arriba; a igual fecha, por creación.
     .index("formId_submittedBy_date", ["formId", "submittedBy", "date"])
     .index("formId_date", ["formId", "date"])
+    .index("importId", ["importId"])
+    // La bandeja de seguimientos: los abiertos no dependen de un rango de
+    // fechas, así que se leen por estado.
+    .index("projectId_status", ["projectId", "status"])
+    .index("formId_status", ["formId", "status"])
     // Los elementos de un listado, por título: los activos para el selector,
     // y todos para quien los mantiene.
     .index("formId_active_titleSearch", ["formId", "active", "titleSearch"])
@@ -251,6 +305,57 @@ const schema = defineSchema({
       "formId",
       "date",
     ]),
+
+  /** El resumen de las respuestas vigentes de un formato en un día: lo que
+   *  sus resultados necesitan de cada una, y nada más. **Derivado** de
+   *  `formResponses` (`01 §7.3`): lo mantiene toda mutation que escribe,
+   *  anula o retira una respuesta, y `formDigests.rebuild` lo reconstruye
+   *  (`docs/plans/2026-10-10-resumenes-de-resultados-design.md`). */
+  formDayDigests: defineTable({
+    projectId: v.id("projects"),
+    formId: v.id("forms"),
+    /** La fecha de negocio. */
+    date: v.string(),
+    /** Una fila por respuesta vigente, en el orden en que se registraron. */
+    rows: digestRows,
+    /** Si el día tiene más respuestas de las que caben: las cifras que lo
+     *  incluyan se dicen parciales. */
+    overflow: v.boolean(),
+  })
+    .index("projectId", ["projectId"])
+    .index("formId_date", ["formId", "date"]),
+
+  /** Una carga de registros desde un archivo: elementos de un listado o
+   *  respuestas con la fecha en que ocurrieron. Es el registro de quién trajo
+   *  qué, y lo que permite deshacerlo entero
+   *  (`docs/plans/2026-10-10-importacion-de-registros-design.md`). */
+  formImports: defineTable({
+    projectId: v.id("projects"),
+    /** Requerida: una importación no existe sin su formato (`01 §6.1`). */
+    formId: v.id("forms"),
+    /** La versión con que se escribe toda la importación, fijada al empezar. */
+    versionId: v.id("formVersions"),
+    createdBy: v.id("users"),
+    fileName: v.string(),
+    /** La huella del contenido del archivo: avisa de una segunda subida. */
+    fingerprint: v.string(),
+    mode: v.union(...IMPORT_MODES.map((mode) => v.literal(mode))),
+    status: v.union(...IMPORT_STATUSES.map((status) => v.literal(status))),
+    counts: v.object({
+      /** Las filas que quien importa confirmó enviar. */
+      total: v.number(),
+      created: v.number(),
+      /** Sólo en un listado. */
+      updated: v.number(),
+      skipped: v.number(),
+      rejected: v.number(),
+    }),
+    finishedAt: v.optional(v.number()),
+    revertedBy: v.optional(v.id("users")),
+    revertedAt: v.optional(v.number()),
+  })
+    .index("projectId", ["projectId"])
+    .index("formId", ["formId"]),
 
   /* ──────────────────────── Resultados y tablero ────────────────────────── */
 

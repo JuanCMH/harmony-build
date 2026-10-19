@@ -49,6 +49,7 @@ export const listOfPermissions = [
   },
   { name: "Anular respuestas", group: "Formatos", value: "voidResponses" },
   { name: "Gestionar listados", group: "Formatos", value: "editCatalogs" },
+  { name: "Importar registros", group: "Formatos", value: "importResponses" },
 ] as const satisfies readonly {
   name: string;
   group: PermisionGroup;
@@ -74,6 +75,7 @@ export const emptyPermissions = (): Record<PermissionValue, boolean> => ({
   viewResponses: false,
   voidResponses: false,
   editCatalogs: false,
+  importResponses: false,
 });
 
 /** Si `convex/permissions.ts` gana una llave que esta lista no ofrece, esto

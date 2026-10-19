@@ -7,3 +7,12 @@ export const EmptyValue = ({ className }: { className?: string }) => (
     Sin respuesta
   </span>
 );
+
+/** Un campo que una importación no pudo traer: una firma, una foto, un
+ *  archivo o una tabla. No es que nadie lo respondiera: el archivo no lo
+ *  llevaba, y se dice así. */
+export const UnavailableValue = ({ className }: { className?: string }) => (
+  <span className={cn("text-sm text-muted-foreground", className)}>
+    No disponible en una respuesta importada
+  </span>
+);

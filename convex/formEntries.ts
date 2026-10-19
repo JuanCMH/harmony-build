@@ -5,7 +5,6 @@ import { ConvexError, v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import {
-  type MutationCtx,
   type QueryCtx,
   internalMutation,
   mutation,
@@ -28,6 +27,7 @@ import type { FormSection } from "./lib/form_types";
 import {
   composeReference,
   releaseFiles,
+  replaceLinks,
   resolveValues,
   writeLinks,
 } from "./lib/form_values";
@@ -68,19 +68,6 @@ async function requireCurrentVersion(ctx: QueryCtx, form: Doc<"forms">) {
     throw new ConvexError(formResponsesErrors.formNotFillable(form.kind));
   }
   return version;
-}
-
-async function replaceLinks(
-  ctx: MutationCtx,
-  entry: Doc<"formResponses">,
-  links: Parameters<typeof writeLinks>[2],
-) {
-  const current = await ctx.db
-    .query("formResponseLinks")
-    .withIndex("responseId", (q) => q.eq("responseId", entry._id))
-    .collect();
-  for (const link of current) await ctx.db.delete(link._id);
-  await writeLinks(ctx, entry, links);
 }
 
 /* ────────────────────────────── Escrituras ──────────────────────────────── */

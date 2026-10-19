@@ -196,7 +196,7 @@ Project (la obra o el proyecto de la empresa)
 | `formVersions` | Las secciones de un formato: su borrador y cada versión publicada. | Una versión publicada no se modifica nunca (`docs/plans/2026-09-28-modulo-de-formatos-design.md §2`). |
 | `formResponses` | Una respuesta —o un elemento de listado— con sus valores anidados y tipados. | Guarda con qué versión se contestó. Una respuesta no se edita: se anula. Un elemento se edita y se inactiva. |
 | `formResponseLinks` | Una fila por elemento distinto que una respuesta relaciona. | Es lo que se consulta al revés: el historial de un vehículo. |
-| `formResults` | Un resultado de un formato: su nombre y la definición de un cálculo: uno de nueve tipos, con sus piezas (fórmula, condiciones, meta, comparación, series). | **No guarda datos**: se calcula al leer, sobre las respuestas vigentes del rango de fechas que se mire (`docs/plans/2026-10-09-resultados-y-tablero-design.md`). |
+| `formResults` | Un resultado de un formato: su nombre y la definición de un cálculo: uno de once tipos, con sus piezas (fórmula, condiciones, meta, comparación, series). | **No guarda datos**: se calcula al leer, sobre las respuestas vigentes del rango de fechas que se mire (`docs/plans/2026-10-09-resultados-y-tablero-design.md`). |
 | `dashboards` | El tablero del proyecto: uno, con sus pestañas y los resultados que enseña cada una. | Apunta a los resultados por id, no los copia. |
 | `logs` | Auditoría. | Ver `01 §5.5`. |
 | `users` | Identidad (tablas de `@convex-dev/auth`). | No es dominio: una persona existe fuera de cualquier proyecto. |
@@ -208,7 +208,7 @@ versiones, 18 tipos de campo, relaciones entre formatos, diligenciamiento desde
 el teléfono y consulta de respuestas · resultados por formato y tablero del
 proyecto, por rango de fechas · biblioteca de formatos SST
 (`convex/sst_library/`, instalada con `formLibrary.installSst`, con sus
-resultados y su tablero) · web responsive instalable como PWA.
+resultados, su seguimiento de hallazgos y su tablero) · web responsive instalable como PWA.
 
 > [!NOTE]
 > El detalle exacto de entidades, campos, índices y estados es responsabilidad de
@@ -276,6 +276,7 @@ ya está decidida en §5.1.
 | **Gráficas** | `recharts` (`3.8.0`, fijada sin `^`) vía `components/ui/chart.tsx` | cualquier otra | Los resultados de los formatos y el tablero: la tendencia y el cumplimiento (`packages/forms/components/result-charts.tsx`). Lo que es una barra, una tabla o un mapa de calor se pinta con HTML, sin librería. |
 | **Códigos aleatorios** | `oslo/crypto` | `Math.random()` para cualquier credencial | Código de unión y código de restablecimiento. Declarada explícitamente en `package.json`, aunque `@convex-dev/auth` también la trae. |
 | **Observabilidad / errores** | `posthog-js` vía `components/providers/observability-provider.tsx` | Sentry, Datadog, un segundo SDK «por comparar»; `console.error` suelto en código de aplicación | Todo error del cliente pasa por `logError` (`lib/logging.ts`), que es el único punto que reenvía a PostHog. Grabación de sesión y autocaptura se apagan **en el código**, no en el dashboard. Sin `NEXT_PUBLIC_POSTHOG_KEY` el provider no hace nada. |
+| **Leer y escribir Excel** | `exceljs` (`4.4.0`, fijada sin `^`) | SheetJS (`xlsx`), un lector de `.xlsx` propio | La importación de registros lee el `.xlsx` en el navegador (`packages/forms/lib/import-file.ts`), y se carga **sólo al abrir un archivo**. No lee `.csv` en el navegador: eso lo hace `packages/forms/lib/import-csv.ts`. La primera exportación la usará para escribir. |
 
 **Decididas y no instaladas todavía.** Ninguna de estas está en
 `package.json`. Entran **junto a su primer consumidor**, moviendo su fila a la
@@ -283,7 +284,6 @@ tabla de arriba en el mismo cambio:
 
 | Propósito | Será la canónica | Entra con |
 |---|---|---|
-| **Escribir/exportar Excel** | `exceljs` — *no instalada todavía* | La primera exportación de respuestas. |
 | **Generar PDF** | `pdfmake` — *no instalada todavía* | La primera exportación a PDF. |
 | **Migraciones de datos** | `@convex-dev/migrations` — *no instalada todavía* | La primera migración sobre datos vivos (`01 §7.2`). |
 

@@ -300,6 +300,7 @@ const LIGHT_TABLES = [
   "logs",
   "formCategories",
   "formResponseLinks",
+  "formImports",
   "formResults",
   "dashboards",
   "forms",
@@ -348,6 +349,18 @@ export const purgeProjectData = internalMutation({
       mayHaveMore ||= versions.length === limit;
       for (const version of versions) await ctx.db.delete(version._id);
       budget -= versions.length;
+    }
+
+    // Los resúmenes diarios pesan como las versiones: de pocos en pocos.
+    if (budget > 0) {
+      const limit = Math.min(budget, PURGE_HEAVY_BATCH);
+      const digests = await ctx.db
+        .query("formDayDigests")
+        .withIndex("projectId", (q) => q.eq("projectId", args.projectId))
+        .take(limit);
+      mayHaveMore ||= digests.length === limit;
+      for (const digest of digests) await ctx.db.delete(digest._id);
+      budget -= digests.length;
     }
 
     for (const table of LIGHT_TABLES) {

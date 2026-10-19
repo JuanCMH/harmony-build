@@ -4,8 +4,10 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { type QueryCtx, mutation, query } from "./_generated/server";
 import { addDays, daysBetween } from "./lib/date_buckets";
+import { todayInColombia } from "./lib/dates";
 import { formResultsErrors } from "./lib/error_messages";
 import { canViewAll, findVisibleForm, requireForm } from "./lib/form_access";
+import { digestRange, hasCurrentDigests } from "./lib/form_digests";
 import { flattenFields } from "./lib/form_evaluation";
 import { loadPublished } from "./lib/form_store";
 import {
@@ -19,18 +21,100 @@ import {
   resultName,
   resultProblem,
 } from "./lib/result_definition";
+import type { ComputedIssue } from "./lib/result_tracking";
 import { RESULT_LIMITS } from "./lib/result_types";
 import { resultConfig } from "./lib/result_validators";
 import { fromStoredValues } from "./lib/stored_values";
+import { trackingCode } from "./lib/tracking";
 import { isRealDate } from "./lib/value_validation";
 
-/** Cuántas respuestas entran en un cálculo. Una inspección de 63 ítems pesa
- *  varios kilobytes: leer más en cada apertura del tablero no escala
- *  (`01 §6`). Por encima, el resultado dice que está truncado; el paso
- *  siguiente es un resumen diario mantenido al escribir. */
+/** Cuántas respuestas entran en un cálculo **cuando se leen enteras**: sólo
+ *  mientras un formato no tiene sus resúmenes diarios al día
+ *  (`lib/form_digests.ts`). Una inspección de 63 ítems pesa varios
+ *  kilobytes: leer más en cada apertura del tablero no escala (`01 §6`). */
 const RESPONSES_CAP = 300;
-/** Los elementos activos de un listado que se miran por vencimientos. */
+/** Los elementos activos de un listado que se miran por vencimientos, o a
+ *  los que se espera en un programa. */
 const ENTRIES_CAP = 500;
+/** Los asuntos abiertos de un seguimiento que entran en un cálculo. */
+const OPEN_ISSUES_CAP = 500;
+
+/** Los elementos activos de un listado, hasta el tope. */
+async function activeEntries(ctx: QueryCtx, formId: Id<"forms">) {
+  const read = await ctx.db
+    .query("formResponses")
+    .withIndex("formId_active_titleSearch", (q) =>
+      q.eq("formId", formId).eq("active", true),
+    )
+    .take(ENTRIES_CAP + 1);
+  return {
+    capped: read.length > ENTRIES_CAP,
+    entries: read.slice(0, ENTRIES_CAP).map(
+      (entry): ComputedEntry => ({
+        id: entry._id,
+        title: entry.title ?? "",
+        values: fromStoredValues(entry.values),
+      }),
+    ),
+  };
+}
+
+/** Un asunto como lo calcula un resultado. Uno anulado no es un asunto. */
+function toIssue(
+  form: Doc<"forms">,
+  issue: Doc<"formResponses">,
+): (ComputedResponse & { issue: ComputedIssue }) | null {
+  if (issue.status !== "open" && issue.status !== "closed") return null;
+  const values = fromStoredValues(issue.values);
+  return {
+    date: issue.date,
+    values,
+    issue: {
+      id: issue._id,
+      code: trackingCode({
+        prefix: form.numberPrefix,
+        year: issue.year,
+        number: issue.number,
+      }),
+      title: issue.title ?? "",
+      status: issue.status,
+      date: issue.date,
+      ...(issue.closedAt !== undefined
+        ? { closedDate: todayInColombia(issue.closedAt) }
+        : {}),
+      ...(issue.dueDate ? { dueDate: issue.dueDate } : {}),
+      ...(issue.responsibleLabel
+        ? { responsible: issue.responsibleLabel }
+        : {}),
+      values,
+    },
+  };
+}
+
+/** Los asuntos de un seguimiento que se abrieron en un rango, del más viejo
+ *  al más nuevo. Se leen directos: un asunto cambia después de abrirse, así
+ *  que no tiene resumen diario. */
+async function issuesOpened(
+  ctx: QueryCtx,
+  form: Doc<"forms">,
+  from: string,
+  to: string,
+) {
+  const read = await ctx.db
+    .query("formResponses")
+    .withIndex("formId_date", (q) =>
+      q.eq("formId", form._id).gte("date", from).lte("date", to),
+    )
+    .order("desc")
+    .take(RESPONSES_CAP + 1);
+  return {
+    capped: read.length > RESPONSES_CAP,
+    responses: read
+      .slice(0, RESPONSES_CAP)
+      .reverse()
+      .flatMap((issue) => toIssue(form, issue) ?? []),
+  };
+}
 
 /** Los resultados de un formato, en el orden en que se crearon. */
 export const resultsOf = (ctx: QueryCtx, formId: Id<"forms">) =>
@@ -84,10 +168,16 @@ export const compute = query({
     /** Las respuestas vigentes de un formato en un rango, de la más vieja a
      *  la más nueva. Si no caben todas, se quedan las más recientes. */
     const responsesOf = async (
-      formId: Id<"forms">,
+      source: Doc<"forms">,
       from: string,
       to: string,
     ) => {
+      // De sus resúmenes diarios, si están al día: es lo que deja calcular
+      // un año entero (`01 §6`, forma 4).
+      if (hasCurrentDigests(source)) {
+        return await digestRange(ctx, source._id, from, to);
+      }
+      const formId = source._id;
       const read = await ctx.db
         .query("formResponses")
         .withIndex("formId_date", (q) =>
@@ -113,49 +203,91 @@ export const compute = query({
     let responses: ComputedResponse[] = [];
     let previous: ComputedResponse[] | undefined;
     let entries: ComputedEntry[] = [];
+    let openIssues: ComputedIssue[] = [];
+    const subjects = new Map<string, ComputedEntry[]>();
     let capped = false;
     const reads = results.some((result) => result.config.type !== "composite");
+    const compares = results.some(
+      (result) => result.config.type === "indicator" && result.config.compare,
+    );
+    /** El periodo anterior, de igual largo. */
+    const before = () => {
+      const days = daysBetween(args.from, args.to) + 1;
+      return [addDays(args.from, -days), addDays(args.from, -1)] as const;
+    };
     if (reads && form.kind === "record") {
-      const read = await responsesOf(form._id, args.from, args.to);
+      const read = await responsesOf(form, args.from, args.to);
       capped = read.capped;
       responses = read.responses;
 
-      // El periodo anterior, de igual largo, sólo si algún indicador se
-      // compara. Si no cabe entero, no se compara: media cifra engaña.
-      if (
-        results.some(
-          (result) =>
-            result.config.type === "indicator" && result.config.compare,
-        )
-      ) {
-        const days = daysBetween(args.from, args.to) + 1;
-        const before = await responsesOf(
-          form._id,
-          addDays(args.from, -days),
-          addDays(args.from, -1),
-        );
-        previous = before.capped ? undefined : before.responses;
+      // El periodo anterior sólo si algún indicador se compara. Si no cabe
+      // entero, no se compara: media cifra engaña.
+      if (compares) {
+        const earlier = await responsesOf(form, ...before());
+        previous = earlier.capped ? undefined : earlier.responses;
+      }
+
+      // A quién se espera en cada programa: los elementos activos del listado
+      // que elige su relación. Cada listado se lee una vez.
+      const catalogs = new Map<string, ComputedEntry[]>();
+      for (const result of results) {
+        if (result.config.type !== "coverage") continue;
+        const fieldId = result.config.byFieldId;
+        if (result.config.scope !== "catalog" || subjects.has(fieldId)) {
+          continue;
+        }
+        const target = fields.find((field) => field.id === fieldId)?.config
+          .reference?.formId;
+        const catalogId = target
+          ? ctx.db.normalizeId("forms", target)
+          : null;
+        if (!catalogId) continue;
+        if (!catalogs.has(catalogId)) {
+          // El listado tiene que ser de este proyecto: su id sale de la
+          // definición del formato, que escribe una persona (`01 §10`).
+          const catalog = await ctx.db.get(catalogId);
+          if (catalog?.projectId !== form.projectId) continue;
+          const read = await activeEntries(ctx, catalogId);
+          capped = capped || read.capped;
+          catalogs.set(catalogId, read.entries);
+        }
+        subjects.set(fieldId, catalogs.get(catalogId) ?? []);
+      }
+    }
+    if (reads && form.kind === "tracking") {
+      const read = await issuesOpened(ctx, form, args.from, args.to);
+      capped = read.capped;
+      responses = read.responses;
+      if (compares) {
+        const earlier = await issuesOpened(ctx, form, ...before());
+        previous = earlier.capped ? undefined : earlier.responses;
+      }
+      // Los abiertos no miran el periodo: se leen por estado.
+      if (results.some((result) => result.config.type === "tracking")) {
+        const open = await ctx.db
+          .query("formResponses")
+          .withIndex("formId_status", (q) =>
+            q.eq("formId", form._id).eq("status", "open"),
+          )
+          .take(OPEN_ISSUES_CAP + 1);
+        capped = capped || open.length > OPEN_ISSUES_CAP;
+        openIssues = open
+          .slice(0, OPEN_ISSUES_CAP)
+          .flatMap((issue) => toIssue(form, issue)?.issue ?? []);
       }
     }
     if (results.length > 0 && form.kind === "catalog") {
-      const read = await ctx.db
-        .query("formResponses")
-        .withIndex("formId_active_titleSearch", (q) =>
-          q.eq("formId", form._id).eq("active", true),
-        )
-        .take(ENTRIES_CAP + 1);
-      capped = read.length > ENTRIES_CAP;
-      entries = read.slice(0, ENTRIES_CAP).map((entry) => ({
-        id: entry._id,
-        title: entry.title ?? "",
-        values: fromStoredValues(entry.values),
-      }));
+      const read = await activeEntries(ctx, form._id);
+      capped = read.capped;
+      entries = read.entries;
     }
 
     const input = {
       fields,
       responses,
       entries,
+      subjects,
+      openIssues,
       previous,
       range: { from: args.from, to: args.to },
       today: args.today,
@@ -196,13 +328,15 @@ export const compute = query({
             ? await loadPublished(ctx, other)
             : null;
         if (other?.kind === "record" && otherPublished) {
-          const read = await responsesOf(other._id, args.from, args.to);
+          const read = await responsesOf(other, args.from, args.to);
           capped = capped || read.capped;
           inputs.set(other._id, {
             ...input,
             fields: flattenFields(otherPublished.sections),
             responses: read.responses,
             entries: [],
+            subjects: new Map(),
+            openIssues: [],
             previous: undefined,
           });
         } else {

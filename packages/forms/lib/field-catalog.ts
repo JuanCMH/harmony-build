@@ -1,3 +1,4 @@
+import type { FormKind } from "@/convex/lib/form_types";
 import {
   type ComputedKind,
   type ComputedOperator,
@@ -27,7 +28,9 @@ import {
   Eraser,
   Hash,
   Image,
+  Flag,
   LibraryBig,
+  Milestone,
   Lightbulb,
   Link,
   List,
@@ -69,7 +72,16 @@ export const ENTITY_ICONS = {
   response: ClipboardPen,
   entry: Box,
   category: Tag,
+  tracking: Milestone,
+  issue: Flag,
 } as const satisfies Record<string, LucideIcon>;
+
+/** El icono de un formato, según su clase. */
+export const KIND_ICON = {
+  record: ENTITY_ICONS.form,
+  catalog: ENTITY_ICONS.catalog,
+  tracking: ENTITY_ICONS.tracking,
+} as const satisfies Record<FormKind, LucideIcon>;
 
 /** Las acciones propias del módulo (`03 §5.3`). */
 export const FORM_ACTION_ICONS = {

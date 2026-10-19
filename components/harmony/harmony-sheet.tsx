@@ -20,6 +20,9 @@ interface HarmonySheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   maxWidth?: string;
+  /** Un panel que se abre para mirar, no para escribir: sin foco en el
+   *  primer campo, que en el teléfono saca el teclado y tapa el panel. */
+  noAutoFocus?: boolean;
   children: React.ReactNode;
 }
 
@@ -27,6 +30,7 @@ function HarmonySheet({
   open,
   onOpenChange,
   maxWidth = "sm:max-w-lg",
+  noAutoFocus = false,
   children,
 }: HarmonySheetProps) {
   return (
@@ -34,7 +38,12 @@ function HarmonySheet({
       {/* `w-full` gana al `w-3/4` del primitivo: en móvil un panel que deja
           ver un cuarto de la pantalla detrás sólo sirve para truncar títulos.
           A partir de `sm` manda el `maxWidth` de cada panel. */}
-      <SheetContent className={cn("flex w-full flex-col gap-0", maxWidth)}>
+      <SheetContent
+        className={cn("flex w-full flex-col gap-0", maxWidth)}
+        onOpenAutoFocus={
+          noAutoFocus ? (event) => event.preventDefault() : undefined
+        }
+      >
         {children}
       </SheetContent>
     </Sheet>

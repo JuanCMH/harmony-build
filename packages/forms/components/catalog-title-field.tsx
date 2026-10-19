@@ -26,12 +26,14 @@ import { ConfigBlock } from "./form-field-config";
  * guarda —y, si el listado ya está publicado, se publica— antes de elegirlo.
  */
 export const CatalogTitleField = ({
+  kind,
   formId,
   titleFieldId,
   savedDraft,
   published,
   hasUnsavedChanges,
 }: {
+  kind: "catalog" | "tracking";
   formId: Id<"forms">;
   titleFieldId: string | undefined;
   savedDraft: readonly FormSection[];
@@ -44,8 +46,16 @@ export const CatalogTitleField = ({
 
   return (
     <ConfigBlock
-      title="Campo que titula cada elemento"
-      help="Un texto corto, obligatorio, sin condición ni cálculo. Es lo que se lee al elegir un elemento desde otro formato."
+      title={
+        kind === "tracking"
+          ? "Campo que titula cada asunto"
+          : "Campo que titula cada elemento"
+      }
+      help={
+        kind === "tracking"
+          ? "Un texto corto y obligatorio de la primera etapa, sin condición ni cálculo. Es lo que se lee en la bandeja."
+          : "Un texto corto, obligatorio, sin condición ni cálculo. Es lo que se lee al elegir un elemento desde otro formato."
+      }
     >
       <Select
         value={isValid ? titleFieldId : ""}
@@ -62,7 +72,7 @@ export const CatalogTitleField = ({
         }
       >
         <SelectTrigger
-          aria-label="Campo que titula cada elemento"
+          aria-label="Campo de título"
           className="w-full"
         >
           <SelectValue

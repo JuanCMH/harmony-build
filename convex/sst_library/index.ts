@@ -2,7 +2,8 @@
  *  construcción, que eran hojas de Excel, como definiciones de formato.
  *
  *  El orden es el de instalación: primero los listados —y entre ellos, antes
- *  el que otro relaciona—, después los formatos que los eligen.
+ *  el que otro relaciona—, después los formatos que los eligen y, al final,
+ *  el seguimiento.
  */
 
 import { SST_CATALOGS } from "./catalogs";
@@ -15,6 +16,7 @@ import { CONTROL_DE_AUSENTISMO } from "./forms/control_de_ausentismo";
 import { CAPACITACIONES_Y_CHARLAS } from "./forms/capacitaciones_y_charlas";
 import { GESTION_AMBIENTAL } from "./forms/gestion_ambiental";
 import { REGISTRO_FOTOGRAFICO } from "./forms/registro_fotografico";
+import { SEGUIMIENTO_DE_HALLAZGOS } from "./forms/seguimiento_de_hallazgos";
 import { SST_F_065 } from "./forms/sst_f_065";
 import { SST_F_066 } from "./forms/sst_f_066";
 import { SST_F_074 } from "./forms/sst_f_074";
@@ -52,4 +54,6 @@ export const SST_LIBRARY: LibraryForm[] = [
   CAPACITACIONES_Y_CHARLAS,
   GESTION_AMBIENTAL,
   REGISTRO_FOTOGRAFICO,
+  // Seguimiento: lo que las inspecciones encuentran y hay que corregir
+  SEGUIMIENTO_DE_HALLAZGOS,
 ];

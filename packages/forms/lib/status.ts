@@ -52,3 +52,16 @@ export const UNPUBLISHED_CHANGES_BADGE: StatusBadge = {
 export const VOIDED_BADGE: StatusBadge = { label: "Anulada", tone: "red" };
 
 export const INACTIVE_BADGE: StatusBadge = { label: "Inactivo", tone: "gray" };
+
+/** El estado de un asunto de seguimiento. «Vencido» no se guarda: sale de su
+ *  fecha de compromiso contra el día de hoy, y sustituye a «Abierto». */
+export const trackingStatusBadge = (
+  status: string,
+  overdue: boolean,
+): StatusBadge => {
+  if (status === "closed") return { label: "Cerrado", tone: "green" };
+  if (status === "voided") return { label: "Anulado", tone: "red" };
+  return overdue
+    ? { label: "Vencido", tone: "red" }
+    : { label: "Abierto", tone: "yellow" };
+};

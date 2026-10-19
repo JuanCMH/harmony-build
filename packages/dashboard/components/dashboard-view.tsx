@@ -3,16 +3,8 @@
 import { Hint } from "@/components/harmony/hint";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { todayInColombia } from "@/convex/lib/dates";
-import { WIDGET_SIZES, type WidgetSize } from "@/convex/lib/result_validators";
 import { useConfirm } from "@/hooks/use-confirm";
 import { handleConvexErrorCallback } from "@/lib/convex-error-handler";
 import { cn } from "@/lib/utils";
@@ -20,6 +12,12 @@ import { ListEmpty } from "@/packages/forms/components/list-empty";
 import { ResultsRangeBar } from "@/packages/forms/components/results-range-bar";
 import { newId } from "@/packages/forms/lib/new-id";
 import { resolveRange } from "@/packages/forms/lib/results-range";
+import {
+  HEIGHT_SPAN,
+  SIZE_SPAN,
+  WIDGET_GRID,
+} from "@/packages/forms/lib/widget-grid";
+import { suggestedHeight } from "@/packages/forms/lib/suggested-height";
 import { useResultsRange } from "@/packages/forms/store/use-results-range";
 import { useProjectId } from "@/packages/projects/store/use-project-id";
 import {
@@ -38,8 +36,6 @@ import { type useGetDashboard, useSaveDashboard } from "../api";
 import {
   DASHBOARD_ROOM,
   type DraftTab,
-  SIZE_LABEL,
-  SIZE_SPAN,
   addTab,
   addWidget,
   dashboardPayload,
@@ -53,7 +49,10 @@ import {
 } from "../lib/dashboard-draft";
 import { useDashboardTab } from "../store/use-dashboard-tab";
 import { AddWidgetPopover } from "./add-widget-popover";
+import { DashboardTabs } from "./dashboard-tabs";
 import { DashboardWidget } from "./dashboard-widget";
+import { GridHoles } from "./grid-holes";
+import { WidgetEditMenu } from "./widget-edit-menu";
 
 type Dashboard = NonNullable<ReturnType<typeof useGetDashboard>["data"]>;
 
@@ -71,8 +70,9 @@ interface DashboardViewProps {
  * y el periodo viven en la dirección (`02 §8`).
  *
  * Se edita **en el sitio**: en modo edición las tarjetas siguen pintando sus
- * datos, y cada una lleva encima con qué moverla, cambiarle el tamaño o
- * quitarla. Lo que se ve al editar es lo que queda al guardar.
+ * datos con su mismo alto, y cada una lleva en la cabecera el menú con que
+ * moverla, darle ancho y alto o quitarla; los huecos que deja la pestaña se
+ * ven punteados. Lo que se ve al editar es lo que queda al guardar.
  */
 export const DashboardView = ({
   dashboard,
@@ -191,7 +191,7 @@ export const DashboardView = ({
             >
               {showProblem && problem
                 ? problem
-                : "Añade, mueve o quita resultados en cada pestaña. Nada cambia para los demás hasta que guardes."}
+                : "Con el menú de cada resultado lo mueves, le das ancho y alto o lo quitas; los huecos se ven punteados. Nada cambia para los demás hasta que guardes."}
             </p>
           </div>
           <Button
@@ -211,14 +211,18 @@ export const DashboardView = ({
 
       <Tabs value={active?.id ?? ""} onValueChange={setTab} className="gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          {/* `TabsList` ya se desplaza de lado cuando no cabe (`03 §3.2`). */}
-          <TabsList aria-label="Pestañas del tablero" className="min-w-0">
-            {tabs.map((one) => (
-              <TabsTrigger key={one.id} value={one.id}>
-                {one.label.trim() || "Sin nombre"}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+          {/* Las que caben, y el resto en «Más»: no se desplaza de lado. Al
+              editar deja sitio a los controles de la pestaña antes de bajar
+              a otra línea. */}
+          <DashboardTabs
+            tabs={tabs}
+            activeId={active?.id ?? ""}
+            onChange={setTab}
+            className={cn(
+              "w-full sm:w-auto sm:flex-1",
+              isEditing && "sm:basis-72",
+            )}
+          />
           {isEditing ? (
             <>
               {draft.length < DASHBOARD_ROOM.tabs ? (
@@ -232,7 +236,7 @@ export const DashboardView = ({
                 </Button>
               ) : null}
               {active ? (
-                <div className="flex w-full items-center gap-1 sm:ml-auto sm:w-auto">
+                <div className="flex w-full items-center gap-1 sm:w-auto">
                   <Input
                     aria-label="Nombre de la pestaña"
                     className="sm:w-56"
@@ -286,7 +290,7 @@ export const DashboardView = ({
               range={range}
               today={today}
               onChange={setRange}
-              className="w-full sm:ml-auto sm:w-auto"
+              className="w-full sm:w-auto"
             />
           )}
         </div>
@@ -306,97 +310,64 @@ export const DashboardView = ({
                 />
               </div>
             ) : (
-              <div className="grid gap-4 lg:grid-cols-12">
+              <div className={WIDGET_GRID}>
+                {isEditing ? (
+                  <GridHoles
+                    widgets={one.widgets}
+                    disabled={isPending}
+                    onWiden={(widgetId, size) =>
+                      setDraft(resizeWidget(draft, one.id, widgetId, { size }))
+                    }
+                  />
+                ) : null}
                 {one.widgets.map((widget, index) => (
-                  <div
+                  <DashboardWidget
                     key={widget.id}
+                    widget={widget}
+                    range={range}
+                    today={today}
                     className={cn(
-                      "flex min-w-0 flex-col gap-2",
                       SIZE_SPAN[widget.size],
+                      HEIGHT_SPAN[widget.height],
+                      // Lo que se puede mover, punteado alrededor.
+                      isEditing &&
+                        "outline-2 outline-offset-2 outline-h-indigo/30 outline-dashed",
                     )}
-                  >
-                    {isEditing ? (
-                      <div className="flex items-center gap-1 rounded-md border bg-muted/50 p-1">
-                        <Hint label="Mover antes">
-                          <Button
-                            variant="ghost"
-                            size="iconSm"
-                            aria-label={`Mover ${widget.name} antes`}
-                            disabled={isPending || index === 0}
-                            onClick={() =>
-                              setDraft(moveWidget(draft, one.id, widget.id, -1))
-                            }
-                          >
-                            <ArrowLeft />
-                          </Button>
-                        </Hint>
-                        <Hint label="Mover después">
-                          <Button
-                            variant="ghost"
-                            size="iconSm"
-                            aria-label={`Mover ${widget.name} después`}
-                            disabled={
-                              isPending || index === one.widgets.length - 1
-                            }
-                            onClick={() =>
-                              setDraft(moveWidget(draft, one.id, widget.id, 1))
-                            }
-                          >
-                            <ArrowRight />
-                          </Button>
-                        </Hint>
-                        <Select
-                          value={widget.size}
-                          disabled={isPending}
-                          onValueChange={(size) =>
-                            setDraft(
-                              resizeWidget(
-                                draft,
-                                one.id,
-                                widget.id,
-                                size as WidgetSize,
-                              ),
-                            )
-                          }
-                        >
-                          <SelectTrigger
-                            size="sm"
-                            className="ml-1 w-36 bg-background"
-                            aria-label={`Ancho de ${widget.name}`}
-                          >
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {WIDGET_SIZES.map((size) => (
-                              <SelectItem key={size} value={size}>
-                                {SIZE_LABEL[size]}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Hint label="Quitar del tablero">
-                          <Button
-                            variant="ghost"
-                            size="iconSm"
-                            className="ml-auto text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                            aria-label={`Quitar ${widget.name} del tablero`}
-                            disabled={isPending}
-                            onClick={() =>
-                              setDraft(removeWidget(draft, one.id, widget.id))
-                            }
-                          >
-                            <X />
-                          </Button>
-                        </Hint>
-                      </div>
-                    ) : null}
-                    <DashboardWidget
-                      widget={widget}
-                      range={range}
-                      today={today}
-                      className="h-full"
-                    />
-                  </div>
+                    editMenu={
+                      isEditing
+                        ? (data) => (
+                            <WidgetEditMenu
+                              name={widget.name}
+                              type={widget.type}
+                              size={widget.size}
+                              height={widget.height}
+                              suggested={suggestedHeight(widget.type, data)}
+                              isFirst={index === 0}
+                              isLast={index === one.widgets.length - 1}
+                              disabled={isPending}
+                              onMove={(delta) =>
+                                setDraft(
+                                  moveWidget(draft, one.id, widget.id, delta),
+                                )
+                              }
+                              onResize={(change) =>
+                                setDraft(
+                                  resizeWidget(
+                                    draft,
+                                    one.id,
+                                    widget.id,
+                                    change,
+                                  ),
+                                )
+                              }
+                              onRemove={() =>
+                                setDraft(removeWidget(draft, one.id, widget.id))
+                              }
+                            />
+                          )
+                        : undefined
+                    }
+                  />
                 ))}
                 {isEditing &&
                 one.widgets.length < DASHBOARD_ROOM.widgetsPerTab ? (

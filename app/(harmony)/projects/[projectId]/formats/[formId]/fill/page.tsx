@@ -6,9 +6,11 @@ import {
   PageMain,
   PageShell,
 } from "@/components/harmony/page-shell";
+import { stagesOf } from "@/convex/lib/tracking";
 import {
   useGetForm,
   useGetPublishedForm,
+  useOpenTracking,
   useSubmitResponse,
 } from "@/packages/forms/api";
 import { FormCapture } from "@/packages/forms/components/form-capture";
@@ -37,15 +39,29 @@ export default function FillFormPage() {
   const { data: form } = useGetForm({ id: formId });
   const author = useCaptureAuthor(projectId);
 
+  // Un seguimiento no se diligencia entero: aquí se abre un asunto, que es
+  // completar su primera etapa.
+  const isTracking = form?.kind === "tracking";
   const isFillable =
-    form?.kind === "record" &&
+    !!form &&
+    form.kind !== "catalog" &&
     form.status === "published" &&
     form.publishedVersionId !== null &&
-    form.canFill;
+    (isTracking ? form.canOpen : form.canFill);
   const { data: version } = useGetPublishedForm(
     isFillable ? { id: formId } : "skip",
   );
   const { mutate: submitResponse } = useSubmitResponse();
+  const { mutate: openTracking } = useOpenTracking();
+  const sections = useMemo(
+    () =>
+      version
+        ? isTracking
+          ? stagesOf(version.sections).slice(0, 1)
+          : version.sections
+        : [],
+    [version, isTracking],
+  );
 
   useEffect(() => {
     if (form?.kind === "catalog") {
@@ -62,7 +78,10 @@ export default function FillFormPage() {
   const breadcrumb = project
     ? [
         { label: project.name, href: `/projects/${projectId}` },
-        { label: "Formatos", href: formRoutes.list(projectId) },
+        {
+          label: isTracking ? "Seguimientos" : "Formatos",
+          href: formRoutes.list(projectId, isTracking ? "tracking" : "record"),
+        },
         ...(form
           ? [
               {
@@ -71,7 +90,7 @@ export default function FillFormPage() {
               },
             ]
           : []),
-        { label: "Diligenciar" },
+        { label: isTracking ? "Abrir asunto" : "Diligenciar" },
       ]
     : [];
 
@@ -81,7 +100,7 @@ export default function FillFormPage() {
         icon={Lock}
         text="Este formato no existe o no tienes acceso a él."
       />
-    ) : form && form.kind === "record" && !isFillable ? (
+    ) : form && form.kind !== "catalog" && !isFillable ? (
       form.status !== "published" || form.publishedVersionId === null ? (
         <PageLoading
           icon={Archive}
@@ -121,20 +140,26 @@ export default function FillFormPage() {
               code={form.code}
               description={form.description}
               versionNumber={version.number}
-              sections={version.sections}
+              eyebrow={
+                isTracking ? `Abrir asunto · ${sections[0]?.label ?? ""}` : undefined
+              }
+              sections={sections}
               draftScope={draftScope}
               author={author}
-              submitLabel="Enviar"
+              submitLabel={isTracking ? "Abrir asunto" : "Enviar"}
               save={async (values) => {
-                const responseId = await submitResponse(
-                  { formId, values },
-                  { throwError: true },
-                );
+                const responseId = await (isTracking
+                  ? openTracking({ formId, values }, { throwError: true })
+                  : submitResponse({ formId, values }, { throwError: true }));
                 if (!responseId) throw new Error("No se pudo enviar");
                 return responseId;
               }}
               onSaved={(responseId) => {
-                toast.success("Respuesta enviada correctamente");
+                toast.success(
+                  isTracking
+                    ? "Asunto abierto correctamente"
+                    : "Respuesta enviada correctamente",
+                );
                 router.push(formRoutes.response(projectId, formId, responseId));
               }}
             />

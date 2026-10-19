@@ -30,6 +30,7 @@ interface ResponseViewProps {
     files: { storageId: string; url: string | null }[];
     date: string;
     author: { _id: string } | null;
+    imported: object | null;
   };
 }
 
@@ -68,8 +69,9 @@ export const ResponseView = ({ response }: ResponseViewProps) => {
         canOpenEntries
           ? formRoutes.response(projectId, catalogId, entryId)
           : undefined,
+      imported: response.imported !== null,
     }),
-    [response.files, canOpenEntries, projectId],
+    [response.files, response.imported, canOpenEntries, projectId],
   );
 
   if (sections.length === 0)

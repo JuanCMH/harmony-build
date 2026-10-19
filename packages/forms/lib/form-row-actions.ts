@@ -1,5 +1,7 @@
 import type { FormKind, FormStatus } from "@/convex/lib/form_types";
 
+import { KIND_TEXT } from "./kind-text";
+
 /**
  * Qué se puede hacer con un formato desde la lista, según quién mira.
  *
@@ -63,9 +65,9 @@ export const canOpenResponses = (
   keys: FormViewerKeys,
 ): boolean => {
   if (!wasPublished(row)) return false;
-  return row.kind === "record"
-    ? keys.viewResponses || keys.fillForms
-    : keys.viewResponses || keys.editCatalogs;
+  return row.kind === "catalog"
+    ? keys.viewResponses || keys.editCatalogs
+    : keys.viewResponses || keys.fillForms;
 };
 
 export const canFillNow = (row: FormRowState) =>
@@ -85,6 +87,9 @@ export const canOpenResults = (
 
 export const REMOVE_BLOCKED_REASON =
   "Tiene respuestas: se archiva, no se elimina";
+
+export const REMOVE_BLOCKED_REASON_TRACKING =
+  "Tiene asuntos: se archiva, no se elimina";
 
 export const REMOVE_BLOCKED_REASON_CATALOG =
   "Tiene elementos: se archiva, no se elimina";
@@ -113,9 +118,11 @@ export const formRowActions = (
         ? {
             key: "remove",
             blockedReason:
-              row.kind === "record"
-                ? REMOVE_BLOCKED_REASON
-                : REMOVE_BLOCKED_REASON_CATALOG,
+              row.kind === "catalog"
+                ? REMOVE_BLOCKED_REASON_CATALOG
+                : row.kind === "tracking"
+                  ? REMOVE_BLOCKED_REASON_TRACKING
+                  : REMOVE_BLOCKED_REASON,
           }
         : { key: "remove" },
     );
@@ -154,11 +161,11 @@ export const formRowActionLabel = (
     case "addEntry":
       return "Añadir elemento";
     case "responses":
-      return kind === "record" ? "Ver respuestas" : "Ver elementos";
+      return `Ver ${KIND_TEXT[kind].itemsLabel.toLowerCase()}`;
     case "results":
       return "Ver resultados";
     case "edit":
-      return kind === "record" ? "Editar el diseño" : "Editar el listado";
+      return kind === "catalog" ? "Editar el listado" : "Editar el diseño";
     case "duplicate":
       return "Duplicar";
     case "archive":
@@ -172,7 +179,6 @@ export const formRowActionLabel = (
 
 /** «19 formatos», «1 listado». */
 export const countForms = (count: number, kind: FormKind): string => {
-  const [one, many] =
-    kind === "record" ? ["formato", "formatos"] : ["listado", "listados"];
+  const { one, many } = KIND_TEXT[kind];
   return `${new Intl.NumberFormat("es-CO").format(count)} ${count === 1 ? one : many}`;
 };

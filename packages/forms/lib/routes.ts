@@ -2,8 +2,19 @@
  *  `/projects/[projectId]/formats`. Un enlace escrito a mano en cada pantalla
  *  acaba apuntando a una ruta que ya cambió. */
 export const formRoutes = {
-  list: (projectId: string, kind: "record" | "catalog" = "record") =>
-    `/projects/${projectId}/formats${kind === "catalog" ? "?clase=listados" : ""}`,
+  list: (
+    projectId: string,
+    kind: "record" | "catalog" | "tracking" = "record",
+  ) =>
+    `/projects/${projectId}/formats${
+      kind === "catalog"
+        ? "?clase=listados"
+        : kind === "tracking"
+          ? "?clase=seguimientos"
+          : ""
+    }`,
+  /** La bandeja: los asuntos de todos los seguimientos del proyecto. */
+  trackings: (projectId: string) => `/projects/${projectId}/seguimientos`,
   responses: (projectId: string, formId: string) =>
     `/projects/${projectId}/formats/${formId}`,
   edit: (projectId: string, formId: string) =>

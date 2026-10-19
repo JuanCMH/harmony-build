@@ -1,5 +1,10 @@
 "use client";
 
+import {
+  HarmonySheet,
+  HarmonySheetContent,
+  HarmonySheetHeader,
+} from "@/components/harmony/harmony-sheet";
 import { PageLoading } from "@/components/harmony/page-loading";
 import {
   PageHeader,
@@ -14,7 +19,9 @@ import {
   type FormField,
   type FormSection,
 } from "@/convex/lib/form_types";
+import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/hooks/use-confirm";
+import { useWindowSize } from "@/hooks/use-window-size";
 import { handleConvexErrorCallback } from "@/lib/convex-error-handler";
 import { cn } from "@/lib/utils";
 import { useGetMembers } from "@/packages/members/api";
@@ -32,7 +39,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import { Archive, Lock } from "lucide-react";
+import { Archive, Lock, Pencil, PencilRuler, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -60,6 +67,7 @@ import {
   updateSection,
 } from "../lib/builder-sections";
 import { FIELD_CATALOG } from "../lib/field-catalog";
+import { KIND_TEXT } from "../lib/kind-text";
 import { duplicateSection, newField, newSection } from "../lib/field-defaults";
 import { builderContextFields } from "../lib/field-rules";
 import { formRoutes } from "../lib/routes";
@@ -115,6 +123,16 @@ export const FormBuilder = () => {
   const [baseline, setBaseline] = useState<string | null>(null);
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
+  // Por debajo de `lg` la columna de la derecha quedaba al pie del lienzo, a
+  // miles de píxeles del campo elegido: ahí va en una hoja, que se abre al
+  // elegir un campo o con el botón de la barra de secciones.
+  const windowWidth = useWindowSize();
+  const isNarrow = windowWidth !== undefined && windowWidth < 1024;
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const selectField = (fieldId: string | null) => {
+    setSelectedFieldId(fieldId);
+    if (fieldId && isNarrow) setIsPanelOpen(true);
+  };
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [draggingType, setDraggingType] = useState<FieldType | null>(null);
   const [, setBehavior] = useFieldBehaviorSheet();
@@ -442,7 +460,7 @@ export const FormBuilder = () => {
     ? [
         { label: project.name, href: `/projects/${projectId}` },
         {
-          label: listKind === "catalog" ? "Listados" : "Formatos",
+          label: KIND_TEXT[listKind].listLabel,
           href: formRoutes.list(projectId, listKind),
         },
         { label: form?.name ?? "Constructor" },
@@ -486,6 +504,43 @@ export const FormBuilder = () => {
   // Quien diseña ve además las respuestas si las consulta o si diligencia.
   const hasFormTabs = !!form && (form.canViewAll || form.canFill);
 
+  /** La columna de la derecha: al lado del lienzo en escritorio, en una
+   *  hoja por debajo de `lg`. */
+  const builderAside = (
+    <FormBuilderAside
+      kind={listKind}
+      field={selectedField}
+      section={section}
+      fields={allFields}
+      ruleFields={ruleFields}
+      contextFields={contextFields}
+      catalogNames={catalogNames}
+      catalogTitle={
+        form && form.kind !== "record" && draft
+          ? {
+              kind: form.kind,
+              tracking: {
+                dueDateFieldId: form.dueDateFieldId,
+                responsibleFieldId: form.responsibleFieldId,
+                numberPrefix: form.numberPrefix,
+              },
+              formId,
+              titleFieldId: form.titleFieldId,
+              savedDraft: draft.sections,
+              published: published?.sections ?? null,
+            }
+          : null
+      }
+      hasUnsavedChanges={isDirty}
+      isFull={isFull}
+      onBack={() => setSelectedFieldId(null)}
+      onChangeField={changeField}
+      onChangeSection={changeSection}
+      onAddField={(type) => addField(type)}
+      onOpenRules={openRules}
+    />
+  );
+
   return (
     <PageShell>
       <ConfirmDialog />
@@ -528,7 +583,7 @@ export const FormBuilder = () => {
             }
             onGoToProblem={(problem) => {
               if (problem.sectionId) setActiveSectionId(problem.sectionId);
-              setSelectedFieldId(problem.fieldId ?? null);
+              selectField(problem.fieldId ?? null);
             }}
             onOpenDetails={() => setIsDetailsOpen(true)}
             onDiscard={handleDiscard}
@@ -565,24 +620,37 @@ export const FormBuilder = () => {
         >
           <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
             <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-              <div className="shrink-0 border-b px-4 py-2">
-                <FormSectionTabs
-                  sections={sections}
-                  activeSectionId={activeSectionId}
-                  summary={summarizeSections(sections)}
-                  canAdd={sections.length < FORM_LIMITS.maxSections}
-                  onSelect={(id) => {
-                    setActiveSectionId(id);
-                    setSelectedFieldId(null);
-                  }}
-                  onAdd={addSection}
-                  onRename={(id, label) => changeSection(id, { label })}
-                  onMove={(id, offset) =>
-                    setSections((current) => moveSection(current, id, offset))
-                  }
-                  onDuplicate={duplicateSectionById}
-                  onRemove={removeSectionAsked}
-                />
+              <div className="flex shrink-0 items-center gap-2 border-b px-4 py-2">
+                <div className="min-w-0 flex-1">
+                  <FormSectionTabs
+                    sections={sections}
+                    activeSectionId={activeSectionId}
+                    summary={summarizeSections(sections)}
+                    canAdd={sections.length < FORM_LIMITS.maxSections}
+                    onSelect={(id) => {
+                      setActiveSectionId(id);
+                      setSelectedFieldId(null);
+                    }}
+                    onAdd={addSection}
+                    onRename={(id, label) => changeSection(id, { label })}
+                    onMove={(id, offset) =>
+                      setSections((current) => moveSection(current, id, offset))
+                    }
+                    onDuplicate={duplicateSectionById}
+                    onRemove={removeSectionAsked}
+                  />
+                </div>
+                {isNarrow ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="shrink-0"
+                    onClick={() => setIsPanelOpen(true)}
+                  >
+                    {selectedField ? <Pencil /> : <Plus />}
+                    {selectedField ? "Configurar" : "Añadir campo"}
+                  </Button>
+                ) : null}
               </div>
               <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6">
                 {section ? (
@@ -597,7 +665,7 @@ export const FormBuilder = () => {
                       allFields={allFields}
                       selectedFieldId={selectedFieldId}
                       catalogNames={catalogNames}
-                      onSelectField={setSelectedFieldId}
+                      onSelectField={selectField}
                       onDuplicateField={duplicateSelected}
                       onRemoveField={removeFieldAsked}
                     />
@@ -610,39 +678,27 @@ export const FormBuilder = () => {
               </div>
             </div>
 
-            <aside
-              className={cn(
-                "flex w-full shrink-0 flex-col gap-3 border-t p-4",
-                "lg:w-96 lg:border-t-0 lg:border-l",
-              )}
-            >
-              <FormBuilderAside
-                kind={listKind}
-                field={selectedField}
-                section={section}
-                fields={allFields}
-                ruleFields={ruleFields}
-                contextFields={contextFields}
-                catalogNames={catalogNames}
-                catalogTitle={
-                  form?.kind === "catalog" && draft
-                    ? {
-                        formId,
-                        titleFieldId: form.titleFieldId,
-                        savedDraft: draft.sections,
-                        published: published?.sections ?? null,
-                      }
-                    : null
-                }
-                hasUnsavedChanges={isDirty}
-                isFull={isFull}
-                onBack={() => setSelectedFieldId(null)}
-                onChangeField={changeField}
-                onChangeSection={changeSection}
-                onAddField={(type) => addField(type)}
-                onOpenRules={openRules}
-              />
-            </aside>
+            {isNarrow ? (
+              <HarmonySheet
+                open={isPanelOpen}
+                onOpenChange={setIsPanelOpen}
+                noAutoFocus
+              >
+                <HarmonySheetHeader
+                  icon={selectedField ? Pencil : PencilRuler}
+                  title={
+                    selectedField ? "Configurar el campo" : "Sección y campos"
+                  }
+                />
+                <HarmonySheetContent className="gap-3">
+                  {builderAside}
+                </HarmonySheetContent>
+              </HarmonySheet>
+            ) : (
+              <aside className="flex w-full shrink-0 flex-col gap-3 border-t p-4 lg:w-96 lg:border-t-0 lg:border-l">
+                {builderAside}
+              </aside>
+            )}
           </div>
 
           {/* Lo que se ve mientras se arrastra un tipo desde la paleta. */}

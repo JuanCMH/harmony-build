@@ -12,9 +12,12 @@ import { CatalogUsage } from "@/packages/forms/components/catalog-usage";
 import { EntriesTable } from "@/packages/forms/components/entries-table";
 import { FormTabs } from "@/packages/forms/components/form-tabs";
 import { FormSummary } from "@/packages/forms/components/form-summary";
+import { ImportActions } from "@/packages/forms/components/import-actions";
 import { ListEmpty } from "@/packages/forms/components/list-empty";
 import { ResponsesTable } from "@/packages/forms/components/responses-table";
-import { ENTITY_ICONS } from "@/packages/forms/lib/field-catalog";
+import { TrackingsTable } from "@/packages/forms/components/trackings-table";
+import { KIND_ICON } from "@/packages/forms/lib/field-catalog";
+import { KIND_TEXT } from "@/packages/forms/lib/kind-text";
 import { formRoutes } from "@/packages/forms/lib/routes";
 import { useFormId } from "@/packages/forms/store/use-form-id";
 import { useGetProject } from "@/packages/projects/api";
@@ -47,8 +50,11 @@ export default function FormResponsesPage() {
     (wasPublished && published === undefined);
 
   const isCatalog = form?.kind === "catalog";
+  const isTracking = form?.kind === "tracking";
   const isPublished = form?.status === "published";
-  const canFillNow = !!form && !isCatalog && isPublished && form.canFill;
+  const canFillNow =
+    !!form && form.kind === "record" && isPublished && form.canFill;
+  const canOpenNow = !!form && isTracking && form.canOpen;
   const canAddNow = !!form && isCatalog && isPublished && form.canEditEntries;
   const canEditForm = !!form && form.canEdit && form.status !== "archived";
   // Quien sólo diligencia ve las suyas; un listado pide ver o gestionar.
@@ -57,11 +63,26 @@ export default function FormResponsesPage() {
 
   const actions = form ? (
     <>
+      {published && !isTracking ? (
+        <ImportActions
+          form={form}
+          sections={published.sections}
+          canImportNow={isPublished}
+        />
+      ) : null}
       {canFillNow ? (
         <Button size="sm" asChild>
           <Link href={formRoutes.fill(projectId, formId)}>
             <PenLine />
             Diligenciar
+          </Link>
+        </Button>
+      ) : null}
+      {canOpenNow ? (
+        <Button size="sm" asChild>
+          <Link href={formRoutes.fill(projectId, formId)}>
+            <Plus />
+            <span className="sr-only sm:not-sr-only">Abrir asunto</span>
           </Link>
         </Button>
       ) : null}
@@ -93,17 +114,15 @@ export default function FormResponsesPage() {
           {lead}
           <div className="rounded-lg border bg-card">
             <ListEmpty
-              icon={ENTITY_ICONS[isCatalog ? "catalog" : "form"]}
-              title={
-                isCatalog
-                  ? "Este listado todavía no se ha publicado."
-                  : "Este formato todavía no se ha publicado."
-              }
+              icon={KIND_ICON[form.kind]}
+              title={`Este ${KIND_TEXT[form.kind].one} todavía no se ha publicado.`}
               hint={
                 canEditForm
                   ? isCatalog
                     ? "Publícalo desde el constructor para poder añadirle elementos."
-                    : "Publícalo desde el constructor para poder diligenciarlo."
+                    : isTracking
+                      ? "Publícalo desde el constructor para poder abrir asuntos."
+                      : "Publícalo desde el constructor para poder diligenciarlo."
                   : "Cuando quien lo diseña lo publique, podrá usarse."
               }
               action={
@@ -129,6 +148,24 @@ export default function FormResponsesPage() {
             isCatalog
               ? "No tienes permiso para ver los elementos de este listado. Pídeselo a quien administra el proyecto."
               : "No tienes permiso para ver las respuestas de este formato. Pídeselo a quien administra el proyecto."
+          }
+        />
+      );
+
+    if (isTracking)
+      return (
+        <TrackingsTable
+          formId={formId}
+          lead={lead}
+          emptyAction={
+            canOpenNow ? (
+              <Button size="sm" asChild>
+                <Link href={formRoutes.fill(projectId, formId)}>
+                  <Plus />
+                  Abrir asunto
+                </Link>
+              </Button>
+            ) : null
           }
         />
       );
@@ -163,7 +200,7 @@ export default function FormResponsesPage() {
             ? [
                 { label: project.name, href: `/projects/${projectId}` },
                 {
-                  label: isCatalog ? "Listados" : "Formatos",
+                  label: KIND_TEXT[form.kind].listLabel,
                   href: formRoutes.list(projectId, form.kind),
                 },
                 { label: form.name },
@@ -186,7 +223,9 @@ export default function FormResponsesPage() {
         loadingText={
           isCatalog
             ? "Se están cargando los elementos."
-            : "Se están cargando las respuestas."
+            : isTracking
+              ? "Se están cargando los asuntos."
+              : "Se están cargando las respuestas."
         }
       >
         {isLoading ? null : content()}

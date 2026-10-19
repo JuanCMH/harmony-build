@@ -153,6 +153,12 @@ const equipment: LibraryEntry[] = [
     marca: "Caterpillar",
     referencia: "924K",
   },
+  {
+    nombre: "Planta dosificadora Odisa 6000",
+    "tipo-equipo": "planta-de-concreto",
+    marca: "Odisa",
+    referencia: "6000",
+  },
 ];
 
 const extinguishers: LibraryEntry[] = [

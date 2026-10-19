@@ -15,6 +15,7 @@ import {
   readResponse,
   timeText,
   versionLine,
+  importedNotice,
 } from "../response-reading";
 
 const field = (
@@ -301,5 +302,27 @@ describe("el momento de un registro", () => {
   it("el día también es el de Colombia, con el año entero", () => {
     expect(momentText(morning)).toBe("15/09/2026 a las 06:40");
     expect(momentText(lateNight)).toBe("15/09/2026 a las 22:10");
+  });
+});
+
+describe("importedNotice", () => {
+  // Las 15:30 UTC son las 10:30 en Colombia.
+  const at = Date.UTC(2026, 9, 12, 15, 30);
+
+  it("dice cuándo, quién y de qué archivo, y lo que no trae", () => {
+    expect(
+      importedNotice(
+        { at, by: { name: "Nidia" }, fileName: "historia.xlsx" },
+        false,
+      ),
+    ).toBe(
+      `Respuesta importada el ${momentText(at)} por Nidia, desde historia.xlsx. No se diligenció aquí: no trae firmas, fotos, archivos ni tablas.`,
+    );
+  });
+
+  it("en un elemento, y sin el registro de la importación", () => {
+    expect(importedNotice({ at, by: null, fileName: null }, true)).toBe(
+      `Elemento importado el ${momentText(at)} por Usuario desconocido.`,
+    );
   });
 });

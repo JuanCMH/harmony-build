@@ -30,7 +30,7 @@ export const builderProblems = (
   const save = locateProblems(validateForm(sections, options), sections);
   const publish: string[] = [];
   if (flattenFields(sections).length === 0) publish.push(formsErrors.emptyForm);
-  if (options.kind === "catalog" && !options.titleFieldId) {
+  if (options.kind !== "record" && !options.titleFieldId) {
     publish.push(formsErrors.titleFieldRequired);
   }
   return { save, publish };

@@ -175,3 +175,46 @@ export const useListEntryHistory = (
     data,
     RESPONSES_PAGE_SIZE,
   );
+
+/* ───────────────────────────── Importaciones ───────────────────────────── */
+
+/** Cuántos títulos de un listado trae cada página al resolver relaciones. */
+export const IMPORT_TITLES_PAGE_SIZE = 200;
+
+export const useStartImport = () => useMutate(api.formImports.start);
+
+export const useWriteImportBatch = () => useMutate(api.formImports.writeBatch);
+
+export const useFinishImport = () => useMutate(api.formImports.finish);
+
+export const useRevertImport = () => useMutate(api.formImports.revert);
+
+/** Las últimas importaciones de un formato. Lanza sin `importResponses` ni
+ *  la llave de ver sus respuestas o sus elementos. */
+export const useListImports = (
+  data: typeof api.formImports.list._args | "skip",
+) => useFetch(api.formImports.list, data);
+
+/** Los títulos de los elementos de un listado. Lanza sin `importResponses`. */
+export const useListEntryTitles = (
+  data:
+    | Omit<typeof api.formImports.entryTitles._args, "paginationOpts">
+    | "skip",
+) =>
+  usePaginatedFetch(api.formImports.entryTitles, data, IMPORT_TITLES_PAGE_SIZE);
+
+/* ────────────────────────────── Seguimientos ───────────────────────────── */
+
+export const useConfigureTracking = () =>
+  useMutate(api.formTrackings.configure);
+
+export const useOpenTracking = () => useMutate(api.formTrackings.open);
+
+export const useCompleteTrackingStage = () =>
+  useMutate(api.formTrackings.completeStage);
+
+/** La bandeja: los asuntos abiertos, o los cerrados, de un proyecto o de uno
+ *  de sus seguimientos. Lanza sin `viewResponses` ni `fillForms`. */
+export const useListTrackings = (
+  data: typeof api.formTrackings.list._args | "skip",
+) => useFetch(api.formTrackings.list, data);

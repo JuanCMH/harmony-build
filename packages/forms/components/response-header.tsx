@@ -2,10 +2,11 @@ import { Badge } from "@/components/ui/badge";
 import { dateText } from "@/convex/lib/field_text";
 import type { FormKind, ResponseStatus } from "@/convex/lib/form_types";
 import { cn } from "@/lib/utils";
-import { Ban, Info } from "lucide-react";
+import { Ban, FileUp, Info } from "lucide-react";
 import type { ReactNode } from "react";
 
 import {
+  importedNotice,
   momentText,
   outdatedEntryNotice,
   personName,
@@ -31,6 +32,8 @@ interface ResponseHeaderProps {
     version: { _id: string; number: number; publishedAt: number | null } | null;
     author: Person;
     voided: { by: Person; at: number | null; reason: string } | null;
+    /** Si se trajo de un archivo en vez de diligenciarse aquí. */
+    imported: { at: number; by: Person; fileName: string | null } | null;
     title: string | null;
     active: boolean | null;
     updatedAt: number | null;
@@ -51,14 +54,15 @@ export const ResponseHeader = ({
   response,
   publishedVersionNumber,
 }: ResponseHeaderProps) => {
-  const { form, voided } = response;
+  const { form, voided, imported } = response;
   const isEntry = form.kind === "catalog";
+  const isIssue = form.kind === "tracking";
   const notice = isEntry
     ? outdatedEntryNotice(response, publishedVersionNumber)
     : null;
 
   const source = [
-    isEntry ? form.name : null,
+    isEntry || isIssue ? form.name : null,
     form.code ?? null,
     versionLine(response.version),
   ].filter((part): part is string => part !== null);
@@ -68,7 +72,11 @@ export const ResponseHeader = ({
       <div className="space-y-1">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <h2 className="min-w-0 text-xl font-medium tracking-tight break-words">
-            {isEntry ? response.title || "Elemento sin título" : form.name}
+            {isEntry
+              ? response.title || "Elemento sin título"
+              : isIssue
+                ? response.title || "Asunto sin título"
+                : form.name}
           </h2>
           {voided && (
             <Badge
@@ -114,15 +122,28 @@ export const ResponseHeader = ({
           </>
         ) : (
           <>
-            <Fact label="Diligenciada por" wide>
+            <Fact
+              label={
+                isIssue
+                  ? "Abierto por"
+                  : imported
+                    ? "Importada por"
+                    : "Diligenciada por"
+              }
+              wide
+            >
               {personName(response.author)}
             </Fact>
             <Fact label="Fecha" numeric>
               {dateText(response.date)}
             </Fact>
-            <Fact label="Hora" numeric>
-              {timeText(response._creationTime)}
-            </Fact>
+            {/* La hora de una respuesta importada es la de la importación,
+                no la del hecho: no se enseña como si lo fuera. */}
+            {imported ? null : (
+              <Fact label="Hora" numeric>
+                {timeText(response._creationTime)}
+              </Fact>
+            )}
           </>
         )}
       </dl>
@@ -131,6 +152,15 @@ export const ResponseHeader = ({
         <p className="flex items-start gap-2 text-xs text-muted-foreground">
           <Info aria-hidden className="mt-px size-3.5 shrink-0" />
           {notice}
+        </p>
+      )}
+
+      {imported && (
+        <p className="flex items-start gap-2 text-xs text-muted-foreground">
+          <FileUp aria-hidden className="mt-px size-3.5 shrink-0" />
+          <span className="min-w-0 break-words">
+            {importedNotice(imported, isEntry)}
+          </span>
         </p>
       )}
 

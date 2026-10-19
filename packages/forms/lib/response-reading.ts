@@ -110,6 +110,9 @@ export interface ValueViewContext {
   /** La dirección de un elemento de un listado; `undefined` si quien mira no
    *  puede abrirlo. */
   entryHref: (catalogId: string, entryId: string) => string | undefined;
+  /** Si la respuesta se importó: lo que un archivo no puede traer no se lee
+   *  «sin respuesta», sino que no estaba disponible. */
+  imported?: boolean;
 }
 
 /**
@@ -188,3 +191,22 @@ export const momentText = (timestamp: number): string =>
 export const personName = (
   person: { name?: string; email?: string } | null,
 ): string => person?.name?.trim() || person?.email || "Usuario desconocido";
+
+/** Lo que se dice de una respuesta —o de un elemento— que llegó de un
+ *  archivo: cuándo, quién y de cuál. Es lo que la distingue para siempre de
+ *  lo diligenciado aquí. */
+export const importedNotice = (
+  imported: {
+    at: number;
+    by: { name?: string; email?: string } | null;
+    fileName: string | null;
+  },
+  isEntry: boolean,
+): string => {
+  const source = imported.fileName ? `, desde ${imported.fileName}` : "";
+  const what = isEntry ? "Elemento importado" : "Respuesta importada";
+  const missing = isEntry
+    ? ""
+    : " No se diligenció aquí: no trae firmas, fotos, archivos ni tablas.";
+  return `${what} el ${momentText(imported.at)} por ${personName(imported.by)}${source}.${missing}`;
+};

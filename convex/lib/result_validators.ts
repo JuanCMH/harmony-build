@@ -4,6 +4,7 @@
 import { v } from "convex/values";
 import { COMPUTED_OPERATORS, VISIBILITY_OPERATORS } from "./form_types";
 import {
+  COVERAGE_SCOPES,
   HEAT_VALUES,
   MEASURE_KINDS,
   MEASURE_OPERATIONS,
@@ -107,6 +108,16 @@ export const resultConfig = v.union(
     filters,
   }),
   v.object({
+    type: v.literal("coverage"),
+    byFieldId: v.string(),
+    interval,
+    weekdays: v.optional(v.array(v.number())),
+    scope: literals(COVERAGE_SCOPES),
+    goal,
+    filters,
+  }),
+  v.object({ type: v.literal("tracking"), goal, filters }),
+  v.object({
     type: v.literal("expirations"),
     dateFieldIds: v.array(v.string()),
   }),
@@ -129,6 +140,11 @@ export const resultConfig = v.union(
 export const WIDGET_SIZES = ["third", "half", "twoThirds", "full"] as const;
 export type WidgetSize = (typeof WIDGET_SIZES)[number];
 
+/** Cuántos pisos de la retícula ocupa: dos, tres o cuatro
+ *  (`docs/plans/2026-10-14-tablero-a-la-medida-design.md` §1). */
+export const WIDGET_HEIGHTS = ["short", "medium", "tall"] as const;
+export type WidgetHeight = (typeof WIDGET_HEIGHTS)[number];
+
 export const dashboardTabs = v.array(
   v.object({
     id: v.string(),
@@ -138,6 +154,9 @@ export const dashboardTabs = v.array(
         id: v.string(),
         resultId: v.id("formResults"),
         size: literals(WIDGET_SIZES),
+        /** Sin él, el alto que su tipo trae por omisión: así se leen los
+         *  tableros guardados antes de que hubiera altos. */
+        height: v.optional(literals(WIDGET_HEIGHTS)),
       }),
     ),
   }),

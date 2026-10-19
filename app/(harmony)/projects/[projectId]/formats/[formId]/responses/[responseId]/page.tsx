@@ -9,7 +9,18 @@ import {
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { dateText } from "@/convex/lib/field_text";
-import { useGetForm, useGetResponse } from "@/packages/forms/api";
+import { todayInColombia } from "@/convex/lib/dates";
+import { stagesOf } from "@/convex/lib/tracking";
+import {
+  useCompleteTrackingStage,
+  useGetForm,
+  useGetResponse,
+} from "@/packages/forms/api";
+import { FormCapture } from "@/packages/forms/components/form-capture";
+import { TrackingProgress } from "@/packages/forms/components/tracking-progress";
+import { KIND_TEXT } from "@/packages/forms/lib/kind-text";
+import { useCaptureAuthor } from "@/packages/forms/lib/use-capture-author";
+import { toast } from "sonner";
 import { EntryActions } from "@/packages/forms/components/entry-actions";
 import { EntryHistory } from "@/packages/forms/components/entry-history";
 import { VoidResponseModal } from "@/packages/forms/components/modals/void-response-modal";
@@ -22,7 +33,7 @@ import { useGetProject } from "@/packages/projects/api";
 import { useProjectId } from "@/packages/projects/store/use-project-id";
 import { usePermissions } from "@/packages/roles/store/use-permissions";
 import { Ban, Lock } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 /**
  * Una respuesta, o un elemento de un listado, en sólo lectura.
@@ -42,6 +53,20 @@ export default function ResponsePage() {
   // La versión vigente del listado, para decir a cuál pasará un elemento
   // guardado con otra al editarlo.
   const isEntry = response?.form.kind === "catalog";
+  const tracking = response?.tracking ?? null;
+  const author = useCaptureAuthor(projectId);
+  const { mutate: completeStage } = useCompleteTrackingStage();
+  const today = useMemo(() => todayInColombia(Date.now()), []);
+
+  // De un asunto se lee lo ya completado, y se completa la etapa que toca.
+  const stages = useMemo(
+    () => (response && tracking ? stagesOf(response.sections) : []),
+    [response, tracking],
+  );
+  const doneCount = tracking
+    ? tracking.stages.filter((stage) => stage.completedAt !== null).length
+    : 0;
+  const nextStage = tracking?.canComplete ? stages[doneCount] : undefined;
   const { data: form } = useGetForm(isEntry ? { id: formId } : "skip");
 
   const isLoading = response === undefined;
@@ -76,7 +101,7 @@ export default function ResponsePage() {
             ? [
                 { label: project.name, href: `/projects/${projectId}` },
                 {
-                  label: isEntry ? "Listados" : "Formatos",
+                  label: KIND_TEXT[response.form.kind].listLabel,
                   href: formRoutes.list(projectId, response.form.kind),
                 },
                 {
@@ -86,7 +111,9 @@ export default function ResponsePage() {
                 {
                   label: isEntry
                     ? response.title || "Elemento sin título"
-                    : `Respuesta del ${dateText(response.date)}`,
+                    : tracking
+                      ? tracking.code || response.title || "Asunto"
+                      : `Respuesta del ${dateText(response.date)}`,
                 },
               ]
             : []
@@ -109,8 +136,57 @@ export default function ResponsePage() {
               response={response}
               publishedVersionNumber={form?.publishedVersionNumber ?? null}
             />
+            {tracking ? (
+              <TrackingProgress
+                status={response.status}
+                tracking={tracking}
+                today={today}
+              />
+            ) : null}
             <Separator className="opacity-40" />
-            <ResponseView response={response} />
+            <ResponseView
+              response={
+                tracking
+                  ? { ...response, sections: stages.slice(0, doneCount) }
+                  : response
+              }
+            />
+            {nextStage && author ? (
+              <>
+                <Separator className="opacity-40" />
+                <FormCapture
+                  key={nextStage.id}
+                  formId={ownFormId}
+                  name={nextStage.label}
+                  versionNumber={null}
+                  eyebrow={`Etapa ${doneCount + 1} de ${stages.length}`}
+                  description={nextStage.description}
+                  sections={[nextStage]}
+                  draftScope={null}
+                  author={author}
+                  submitLabel={
+                    doneCount + 1 === stages.length
+                      ? "Completar y cerrar"
+                      : "Completar etapa"
+                  }
+                  save={async (values) => {
+                    const id = await completeStage(
+                      { id: response._id, values },
+                      { throwError: true },
+                    );
+                    if (!id) throw new Error("No se pudo completar la etapa");
+                    return id;
+                  }}
+                  onSaved={() =>
+                    toast.success(
+                      doneCount + 1 === stages.length
+                        ? "Asunto cerrado correctamente"
+                        : "Etapa completada correctamente",
+                    )
+                  }
+                />
+              </>
+            ) : null}
             {isEntry && can(["viewResponses", "fillForms"]) ? (
               <>
                 <Separator className="opacity-40" />

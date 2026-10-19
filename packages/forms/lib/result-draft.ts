@@ -13,6 +13,7 @@ import {
 } from "@/convex/lib/result_definition";
 import type {
   CompositeTerm,
+  CoverageScope,
   HeatValue,
   Measure,
   MeasureKind,
@@ -69,7 +70,13 @@ export interface ResultDraft {
   compositeTerms: CompositeTerm[];
   compositeUnit: string;
   compositeDecimals: number | null;
+  /** De un programa: a quién se espera y, si toca cada día, qué días. */
+  coverageScope: CoverageScope;
+  weekdays: number[];
 }
+
+/** Todos los días: lo que vale un programa que no dice cuáles cuentan. */
+const EVERY_WEEKDAY = [1, 2, 3, 4, 5, 6, 7];
 
 export const emptyMeasure = (
   operation: MeasureKind = "count",
@@ -108,6 +115,8 @@ export const emptyResultDraft = (
   compositeTerms: [],
   compositeUnit: "",
   compositeDecimals: null,
+  coverageScope: "catalog",
+  weekdays: EVERY_WEEKDAY,
 });
 
 const toDraftMeasure = (measure: Measure): DraftMeasure => ({
@@ -174,6 +183,16 @@ export function draftFromResult(
       draft.rowFieldId = config.rowFieldId;
       draft.heatValue = config.value;
       draft.valueFieldId = config.valueFieldId ?? null;
+      break;
+    case "coverage":
+      draft.rowFieldId = config.byFieldId;
+      draft.interval = config.interval;
+      draft.coverageScope = config.scope;
+      draft.weekdays = config.weekdays ?? EVERY_WEEKDAY;
+      draft.goal = toDraftGoal(config.goal);
+      break;
+    case "tracking":
+      draft.goal = toDraftGoal(config.goal);
       break;
     case "expirations":
       draft.dateFieldIds = [...config.dateFieldIds];
@@ -284,6 +303,22 @@ export function draftConfig(draft: ResultDraft): ResultConfig {
           : {}),
         ...toFilters(draft),
       };
+    case "coverage":
+      return {
+        type: "coverage",
+        byFieldId: draft.rowFieldId ?? "",
+        interval: draft.interval,
+        // Los días sólo cuentan cuando toca cada día, y «todos» no se guarda.
+        ...(draft.interval === "day" &&
+        draft.weekdays.length < EVERY_WEEKDAY.length
+          ? { weekdays: [...draft.weekdays].sort((a, b) => a - b) }
+          : {}),
+        scope: draft.coverageScope,
+        ...toGoal(draft.goal),
+        ...toFilters(draft),
+      };
+    case "tracking":
+      return { type: "tracking", ...toGoal(draft.goal), ...toFilters(draft) };
     case "expirations":
       return { type: "expirations", dateFieldIds: draft.dateFieldIds };
   }

@@ -46,7 +46,13 @@ function ChartContainer({
   );
 }
 
-const ChartTooltip = RechartsPrimitive.Tooltip;
+/** El tooltip va pegado al puntero: con la transición de Recharts se
+ *  deslizaba de un punto al otro y dejaba estela. */
+function ChartTooltip(
+  props: React.ComponentProps<typeof RechartsPrimitive.Tooltip>,
+) {
+  return <RechartsPrimitive.Tooltip isAnimationActive={false} {...props} />;
+}
 
 interface TooltipEntry {
   name?: unknown;
@@ -73,13 +79,23 @@ function ChartTooltipContent({
   valueFormatter,
 }: ChartTooltipContentProps) {
   if (!active || !payload?.length) return null;
+  // Una serie puede venir dos veces: entera y su tramo de un periodo
+  // cortado, dibujado aparte. Va una vez, con el valor que tenga.
+  const entries = new Map<string, TooltipEntry>();
+  for (const entry of payload) {
+    const name = String(entry.name ?? "");
+    const seen = entries.get(name);
+    if (!seen || (seen.value == null && entry.value != null)) {
+      entries.set(name, entry);
+    }
+  }
 
   return (
     <div className="grid min-w-32 gap-1 rounded-md bg-primary px-3 py-1.5 text-xs text-primary-foreground">
       <p className="font-medium">
         {labelFormatter ? labelFormatter(label) : String(label ?? "")}
       </p>
-      {payload.map((entry) => (
+      {[...entries.values()].map((entry) => (
         <div
           key={String(entry.name)}
           className="flex items-center justify-between gap-3"

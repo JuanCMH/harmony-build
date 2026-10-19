@@ -8,6 +8,7 @@ import {
   VOID_REASON_MAX,
   VOID_REASON_MIN,
 } from "./form_types";
+import { IMPORT_LIMITS } from "./import_types";
 
 export const authErrors = {
   userNotAuthenticated: "Usuario no autenticado",
@@ -83,8 +84,12 @@ export const logsErrors = {
 /* ─────────────────────────── Módulo de formatos ─────────────────────────── */
 
 /** «el formato» o «el listado», según la clase. */
-const kindNoun = (kind: "record" | "catalog") =>
-  kind === "catalog" ? "el listado" : "el formato";
+const kindNoun = (kind: "record" | "catalog" | "tracking") =>
+  kind === "catalog"
+    ? "el listado"
+    : kind === "tracking"
+      ? "el seguimiento"
+      : "el formato";
 
 export const formCategoriesErrors = {
   userNotAuthenticated: "Usuario no autenticado",
@@ -111,9 +116,9 @@ export const formsErrors = {
   audienceWithoutRoles:
     "Elige al menos un rol, o deja que lo diligencien todos",
   tooManyForms: "El proyecto llegó al máximo de formatos que admite",
-  notCatalog: "Sólo un listado tiene campo de título",
+  notCatalog: "Sólo un listado o un seguimiento tienen campo de título",
   titleFieldRequired:
-    "Elige el campo que titula cada elemento antes de publicar el listado",
+    "Elige el campo de título antes de publicar: es como se nombra cada elemento o cada asunto",
   emptyForm: "Un formato sin campos no se puede publicar",
   archived: "El formato está archivado: reactívalo antes de cambiarlo",
   alreadyArchived: "El formato ya está archivado",
@@ -158,8 +163,9 @@ export const formResultsErrors = {
 export const dashboardsErrors = {
   userNotAuthenticated: "Usuario no autenticado",
   insufficientPermissions: "No tienes los permisos necesarios para esta acción",
-  invalidTabs: "Un tablero lleva entre 1 y 8 pestañas, cada una con su nombre",
+  invalidTabs: "Un tablero lleva entre 1 y 20 pestañas, cada una con su nombre",
   invalidWidgets: "Una pestaña admite hasta 12 resultados",
+  invalidHeight: "Uno de los resultados tiene un alto que su tipo no admite",
   duplicateId: "Hay dos pestañas o dos resultados con el mismo identificador",
   resultNotFound: "Uno de los resultados ya no existe en este proyecto",
 };
@@ -170,7 +176,7 @@ export const formResponsesErrors = {
   formNotFound: "Formato no encontrado",
   responseNotFound: "Respuesta no encontrada",
   entryNotFound: "Elemento no encontrado",
-  formNotFillable: (kind: "record" | "catalog") =>
+  formNotFillable: (kind: "record" | "catalog" | "tracking") =>
     `No se puede diligenciar: ${kindNoun(kind)} no está publicado o está archivado`,
   notRecord: "Un listado no se diligencia: sus elementos se añaden desde él",
   notCatalog: "Sólo un listado tiene elementos",
@@ -192,6 +198,46 @@ export const formResponsesErrors = {
  * código estable que devuelve `validateForm`; el valor, lo que lee quien lo
  * construye.
  */
+/** «5.000». A mano: el runtime de Convex no garantiza los datos de `es-CO`. */
+const thousands = (value: number) =>
+  String(value).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+
+export const formImportsErrors = {
+  userNotAuthenticated: "Usuario no autenticado",
+  insufficientPermissions: "No tienes los permisos necesarios para esta acción",
+  formNotFound: "Formato no encontrado",
+  importNotFound: "Importación no encontrada",
+  formNotPublished:
+    "Sólo se importa en un formato publicado: publícalo o reactívalo antes",
+  invalidMode: "Esa forma de importar no corresponde a esta clase de formato",
+  invalidFileName: `El nombre del archivo debe tener entre 1 y ${IMPORT_LIMITS.maxFileNameLength} caracteres`,
+  invalidTotal: `Un archivo puede traer entre 1 y ${thousands(IMPORT_LIMITS.maxRows)} filas: pártelo en varios`,
+  batchTooLarge: `Un lote no puede traer más de ${IMPORT_LIMITS.batchSize} filas`,
+  overTotal: "Llegaron más filas de las que se anunciaron al empezar",
+  notRunning: "La importación ya terminó o se deshizo",
+  notOwnImport: "Sólo quien empezó la importación puede continuarla",
+  alreadyReverted: "La importación ya se deshizo",
+  notCatalog: "Sólo un listado tiene elementos",
+  // Los motivos por los que una fila se queda fuera.
+  rowDateMissing: "Falta la fecha, o no es una fecha que exista",
+  rowDateInFuture: "La fecha es posterior a hoy",
+  rowEmpty: "La fila no trae ningún dato",
+  rowTitleMissing: "Falta el dato que titula el elemento",
+};
+
+export const formTrackingsErrors = {
+  userNotAuthenticated: "Usuario no autenticado",
+  insufficientPermissions: "No tienes los permisos necesarios para esta acción",
+  formNotFound: "Formato no encontrado",
+  trackingNotFound: "Asunto no encontrado",
+  notTracking: "Sólo un formato de seguimiento tiene asuntos",
+  notOpen: "El asunto ya está cerrado o anulado",
+  fieldNotDate: "La fecha de compromiso tiene que ser un campo de fecha",
+  fieldNotReference:
+    "El responsable tiene que ser una relación con un listado o un texto corto",
+  invalidPrefix: "El prefijo del consecutivo cabe en 8 letras o números",
+};
+
 export const formProblems = {
   tooManySections: `Un formato admite como máximo ${FORM_LIMITS.maxSections} secciones`,
   tooManyFields: `Un formato admite como máximo ${FORM_LIMITS.maxFields} campos`,
@@ -264,7 +310,12 @@ export const formProblems = {
   tableRowsRange: `Las filas mínimas no pueden superar a las máximas, y una tabla admite hasta ${FORM_LIMITS.maxTableRows}`,
   referenceFormRequired: "Una relación quedó sin elegir su listado",
   referenceFillInvalid: `Una relación trae como máximo ${FORM_LIMITS.maxReferenceFill} campos del listado, sin repetir`,
-  titleFieldMissing: "El campo de título ya no existe en el listado",
+  titleFieldMissing: "El campo de título ya no existe",
+  titleFieldNotFirstStage:
+    "El campo de título tiene que estar en la primera etapa: es con lo que se abre el asunto",
+  stageConditional:
+    "Una etapa de un seguimiento no puede llevar condición: tiene que poder completarse",
+  stageEmpty: "Cada etapa de un seguimiento necesita al menos un campo",
   titleFieldInvalid:
     "El campo de título tiene que ser un texto corto, obligatorio, sin condición y sin receta",
 } as const;

@@ -104,6 +104,7 @@ app/
             │   └── [formId]/
             │       ├── results/  # resultados del formato
             │       └── …         # el resto de sus rutas
+            ├── seguimientos/ # la bandeja de asuntos abiertos y cerrados
             ├── registros/  # auditoría
             └── ajustes/    # ajustes del proyecto
                 ├── usuarios/
@@ -117,6 +118,7 @@ app/
 | `/projects` | Redirige al primer proyecto activo de quien entra, o abre la bienvenida (crear un proyecto o unirse con un código). |
 | `/projects/[projectId]` | Inicio del proyecto: lo que hay para diligenciar y, para quien tiene `viewResponses`, el tablero. |
 | `/projects/[projectId]/formats/[formId]/results` | Los resultados de un formato, calculados para un rango de fechas, y dónde se definen (`editForms`). |
+| `/projects/[projectId]/seguimientos` | La bandeja: los asuntos de todos los seguimientos del proyecto, abiertos o cerrados (`viewResponses`, o `fillForms` para los propios). El estado viaja en `estado`. |
 | `/projects/[projectId]/registros` | Auditoría (exige `viewLogs`, `01 §5.5`). |
 | `/projects/[projectId]/ajustes` | Ajustes del proyecto. |
 | `/projects/[projectId]/ajustes/usuarios` | Miembros. |

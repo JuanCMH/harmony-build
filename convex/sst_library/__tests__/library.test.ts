@@ -40,7 +40,7 @@ import {
 /* ─────────────────────────────── La biblioteca ──────────────────────────── */
 
 describe("biblioteca SST", () => {
-  it("trae cinco listados y diecinueve formatos, los listados primero", () => {
+  it("trae cinco listados, diecinueve formatos y un seguimiento, en ese orden", () => {
     expect(catalogs.map((form) => form.key)).toEqual([
       "centros-de-trabajo",
       "personal",
@@ -49,10 +49,11 @@ describe("biblioteca SST", () => {
       "extintores",
     ]);
     expect(records).toHaveLength(19);
-    const firstRecord = SST_LIBRARY.findIndex((form) => form.kind === "record");
-    expect(
-      SST_LIBRARY.slice(firstRecord).every((f) => f.kind === "record"),
-    ).toBe(true);
+    expect(SST_LIBRARY.map((form) => form.kind)).toEqual([
+      ...catalogs.map(() => "catalog"),
+      ...records.map(() => "record"),
+      "tracking",
+    ]);
   });
 
   it("no repite ninguna clave ni ningún código", () => {
@@ -81,9 +82,11 @@ describe("biblioteca SST", () => {
 
   it("ningún formato se parte en más secciones de las que necesita", () => {
     const sectioned = SST_LIBRARY.filter((form) => form.sections.length > 1);
+    // Las de un seguimiento no son pestañas: son sus etapas.
     expect(sectioned.map((form) => form.key)).toEqual([
       "personal",
       "gestion-ambiental",
+      "seguimiento-de-hallazgos",
     ]);
   });
 
@@ -224,10 +227,10 @@ describe.each(EACH_FORM)("%s", (_key, form) => {
     }
   });
 
-  it("sólo un listado tiene título y ejemplos, y el título es un texto obligatorio", () => {
+  it("sólo un listado tiene ejemplos; él y un seguimiento, un título que es un texto obligatorio", () => {
+    if (form.kind !== "catalog") expect(form.sampleEntries).toBeUndefined();
     if (form.kind === "record") {
       expect(form.titleFieldId).toBeUndefined();
-      expect(form.sampleEntries).toBeUndefined();
       return;
     }
     const title = fieldOf(form, form.titleFieldId ?? "");
@@ -368,13 +371,13 @@ describe.each(EACH_FORM)("%s", (_key, form) => {
     }
   });
 
-  it("un listado trae tres o cuatro ejemplos, con títulos distintos", () => {
+  it("un listado trae de tres a cinco ejemplos, con títulos distintos", () => {
     if (form.kind !== "catalog") return;
     const titles = (form.sampleEntries ?? []).map((entry) =>
       String(entry[form.titleFieldId ?? ""]),
     );
     expect(titles.length).toBeGreaterThanOrEqual(3);
-    expect(titles.length).toBeLessThanOrEqual(4);
+    expect(titles.length).toBeLessThanOrEqual(5);
     expect(duplicates(titles)).toEqual([]);
   });
 });
