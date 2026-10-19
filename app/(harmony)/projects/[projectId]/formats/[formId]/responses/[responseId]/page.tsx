@@ -26,6 +26,7 @@ import { EntryHistory } from "@/packages/forms/components/entry-history";
 import { VoidResponseModal } from "@/packages/forms/components/modals/void-response-modal";
 import { ResponseHeader } from "@/packages/forms/components/response-header";
 import { ResponseView } from "@/packages/forms/components/response-view";
+import { useListCrumb } from "@/packages/forms/lib/use-list-crumb";
 import { formRoutes } from "@/packages/forms/lib/routes";
 import { useFormId } from "@/packages/forms/store/use-form-id";
 import { useResponseId } from "@/packages/forms/store/use-response-id";
@@ -47,6 +48,7 @@ export default function ResponsePage() {
   const responseId = useResponseId();
   const { data: project } = useGetProject({ id: projectId });
   const { data: response } = useGetResponse({ id: responseId });
+  const listCrumb = useListCrumb(response?.form.kind ?? "record", "response");
   const { can } = usePermissions();
   const [voidOpen, setVoidOpen] = useState(false);
 
@@ -100,10 +102,7 @@ export default function ResponsePage() {
           project && response
             ? [
                 { label: project.name, href: `/projects/${projectId}` },
-                {
-                  label: KIND_TEXT[response.form.kind].listLabel,
-                  href: formRoutes.list(projectId, response.form.kind),
-                },
+                ...(listCrumb ? [listCrumb] : []),
                 {
                   label: response.form.name,
                   href: formRoutes.responses(projectId, ownFormId),

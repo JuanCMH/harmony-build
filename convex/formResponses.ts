@@ -2,6 +2,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { paginationOptsValidator } from "convex/server";
 import { ConvexError, v } from "convex/values";
 import { internal } from "./_generated/api";
+import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import { todayInColombia } from "./lib/dates";
 import { formResponsesErrors } from "./lib/error_messages";
@@ -244,17 +245,19 @@ export const getById = query({
               responsible: response.responsibleLabel ?? null,
               closedAt: response.closedAt ?? null,
               stages: await Promise.all(
-                stagesOf(version?.sections ?? []).map(async (section, index) => {
-                  const done = response.stages?.[index];
-                  return {
-                    sectionId: section.id,
-                    label: section.label,
-                    completedAt: done?.completedAt ?? null,
-                    completedBy: done
-                      ? await publicUser(ctx, done.completedBy)
-                      : null,
-                  };
-                }),
+                stagesOf(version?.sections ?? []).map(
+                  async (section, index) => {
+                    const done = response.stages?.[index];
+                    return {
+                      sectionId: section.id,
+                      label: section.label,
+                      completedAt: done?.completedAt ?? null,
+                      completedBy: done
+                        ? await publicUser(ctx, done.completedBy)
+                        : null,
+                    };
+                  },
+                ),
               ),
               canComplete:
                 response.status === "open" && canOpenTracking(viewer, form),
@@ -360,5 +363,73 @@ export const list = query({
 
     const page = await responses.order("desc").paginate(args.paginationOpts);
     return { ...page, page: await Promise.all(page.page.map(toRow)) };
+  },
+});
+
+/**
+ * «Mis respuestas»: lo que quien pregunta diligenció en el proyecto, en todos
+ * sus formatos y seguimientos, por fecha de negocio y lo más reciente
+ * primero.
+ *
+ * Sólo las propias, sin excepción: quien ve las de todos las consulta en cada
+ * formato. Los elementos de un listado no son respuestas y no salen. Pide
+ * `fillForms`, la misma llave que deja ver lo que uno diligenció
+ * (`canViewResponse`).
+ */
+export const listMine = query({
+  args: {
+    projectId: v.id("projects"),
+    paginationOpts: paginationOptsValidator,
+  },
+  handler: async (ctx, args) => {
+    const userId = await requireUser(ctx, formResponsesErrors);
+
+    const viewer = await loadViewer(ctx, userId, args.projectId);
+    if (!viewer || !viewer.access.can("fillForms")) {
+      throw new ConvexError(formResponsesErrors.insufficientPermissions);
+    }
+
+    const page = await ctx.db
+      .query("formResponses")
+      .withIndex("projectId_submittedBy_date", (q) =>
+        q.eq("projectId", args.projectId).eq("submittedBy", userId),
+      )
+      .order("desc")
+      // Un elemento de listado es el único que lleva `active`.
+      .filter((q) => q.eq(q.field("active"), undefined))
+      .paginate(args.paginationOpts);
+
+    const forms = new Map<Id<"forms">, Doc<"forms"> | null>();
+    const formOf = async (id: Id<"forms">) => {
+      if (!forms.has(id)) forms.set(id, await ctx.db.get(id));
+      return forms.get(id) ?? null;
+    };
+
+    const rows = [];
+    for (const response of page.page) {
+      const form = await formOf(response.formId);
+      if (!form || !canViewResponse(viewer, form, response)) continue;
+      rows.push({
+        _id: response._id,
+        _creationTime: response._creationTime,
+        formId: form._id,
+        formName: form.name,
+        formCode: form.code ?? null,
+        kind: form.kind,
+        date: response.date,
+        status: response.status,
+        imported: response.importId !== undefined,
+        code:
+          form.kind === "tracking"
+            ? trackingCode({
+                prefix: form.numberPrefix,
+                year: response.year,
+                number: response.number,
+              })
+            : null,
+        title: form.kind === "tracking" ? (response.title ?? "") : null,
+      });
+    }
+    return { ...page, page: rows };
   },
 });

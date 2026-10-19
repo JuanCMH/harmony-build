@@ -261,6 +261,8 @@ const schema = defineSchema({
     // su creación, así que los listados ordenan por estos dos y no por el de
     // arriba; a igual fecha, por creación.
     .index("formId_submittedBy_date", ["formId", "submittedBy", "date"])
+    // «Mis respuestas»: lo que diligenció alguien en todos los formatos.
+    .index("projectId_submittedBy_date", ["projectId", "submittedBy", "date"])
     .index("formId_date", ["formId", "date"])
     .index("importId", ["importId"])
     // La bandeja de seguimientos: los abiertos no dependen de un rango de

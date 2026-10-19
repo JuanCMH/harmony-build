@@ -439,6 +439,17 @@ scroll interno funcione.
   entradas son texto: con un catálogo cerrado (§5), dos entradas vecinas
   acaban compartiendo glifo, y dos iconos iguales en la misma columna no
   distinguen nada.
+- **Quien sólo diligencia tiene su propia vista: la de captura.** No es un
+  tipo de usuario ni un interruptor: la tiene un miembro cuyo rol lleva
+  `fillForms` y ninguna otra llave (`isCaptureView`,
+  `packages/roles/lib/capture-view.ts`; en un componente,
+  `usePermissions().isCaptureView`). Su menú es Inicio, Mis respuestas,
+  Seguimientos y Ajustes —que se queda porque ahí está «Salir del
+  proyecto»—; su inicio es «Para diligenciar» a pantalla completa, con los
+  seguimientos en que puede abrir un asunto; el catálogo de formatos lo lleva
+  al inicio, y las migas de un formato no pasan por él (`useListCrumb`). Es
+  sólo lo que se **enseña**: lo que puede leer o hacer lo sigue decidiendo el
+  servidor.
 - **Un `h1` por pantalla**, aunque no se vea. `PageHeader` lo emite solo, con la
   última miga como texto y `sr-only`: el nombre ya se lee en las migas y
   repetirlo a la vista sería redundancia. Sin él el documento no tiene

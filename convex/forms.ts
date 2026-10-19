@@ -7,6 +7,7 @@ import { formsErrors } from "./lib/error_messages";
 import {
   type FormViewer,
   canFillForm,
+  canOpenTracking,
   canSeeForm,
   findVisibleForm,
   formPermissions,
@@ -451,8 +452,10 @@ export const get = query({
   },
 });
 
-/** Los formatos que quien pregunta puede diligenciar, los que más usa
- *  primero: el bloque «Para diligenciar» del inicio. */
+/** Los formatos que quien pregunta puede diligenciar, y los seguimientos en
+ *  que puede abrir un asunto, los que más usa primero: «Para diligenciar».
+ *  En la vista de captura es el inicio entero, y la única puerta a abrir un
+ *  asunto. */
 export const listFillable = query({
   args: { projectId: v.id("projects") },
   handler: async (ctx, args) => {
@@ -462,13 +465,20 @@ export const listFillable = query({
     const viewer = await loadViewer(ctx, userId, args.projectId);
     if (!viewer) return null;
 
-    const forms = await ctx.db
-      .query("forms")
-      .withIndex("projectId_kind", (q) =>
-        q.eq("projectId", args.projectId).eq("kind", "record"),
-      )
-      .take(MAX_FORMS_PER_PROJECT);
-    const fillable = forms.filter((form) => canFillForm(viewer, form));
+    const [records, trackings] = await Promise.all(
+      (["record", "tracking"] as const).map((kind) =>
+        ctx.db
+          .query("forms")
+          .withIndex("projectId_kind", (q) =>
+            q.eq("projectId", args.projectId).eq("kind", kind),
+          )
+          .take(MAX_FORMS_PER_PROJECT),
+      ),
+    );
+    const fillable = [
+      ...records.filter((form) => canFillForm(viewer, form)),
+      ...trackings.filter((form) => canOpenTracking(viewer, form)),
+    ];
 
     const categories = await categoryNames(ctx, args.projectId);
     const rows = await Promise.all(
@@ -482,6 +492,7 @@ export const listFillable = query({
           .first();
         return {
           _id: form._id,
+          kind: form.kind,
           name: form.name,
           code: form.code,
           description: form.description,

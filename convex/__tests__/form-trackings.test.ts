@@ -47,7 +47,10 @@ const STAGES: FormSection[] = [
     field("compromiso", { type: "date", label: "Fecha de compromiso" }),
   ]),
   section("cierre", 3, [
-    selectField("eficaz", ["Sí", "No"], { label: "¿Fue eficaz?", required: true }),
+    selectField("eficaz", ["Sí", "No"], {
+      label: "¿Fue eficaz?",
+      required: true,
+    }),
   ]),
 ];
 
@@ -56,7 +59,10 @@ let s: Seed;
 let formId: Id<"forms">;
 
 const open = (values: FormValues) =>
-  t.mutation(api.formTrackings.open, { formId, values: stored(STAGES, values) });
+  t.mutation(api.formTrackings.open, {
+    formId,
+    values: stored(STAGES, values),
+  });
 const complete = (id: Id<"formResponses">, values: FormValues) =>
   t.mutation(api.formTrackings.completeStage, {
     id,
@@ -104,7 +110,9 @@ describe("validateForm en un seguimiento", () => {
             ...STAGES[1],
             visibility: {
               match: "all",
-              rules: [{ fieldId: "origen", operator: "eq", values: ["Auditoría"] }],
+              rules: [
+                { fieldId: "origen", operator: "eq", values: ["Auditoría"] },
+              ],
             },
           },
         ],
@@ -116,7 +124,10 @@ describe("validateForm en un seguimiento", () => {
 
 describe("formTrackings.open", () => {
   it("abre con la primera etapa, su consecutivo y su título", async () => {
-    const id = await open({ que: "  Extintor   vencido ", accion: "No es de aquí" });
+    const id = await open({
+      que: "  Extintor   vencido ",
+      accion: "No es de aquí",
+    });
     const second = await open({ que: "Botiquín incompleto" });
 
     const issue = await issueOf(id);
@@ -253,7 +264,12 @@ describe("formTrackings.list y la respuesta", () => {
     expect(
       opened.rows.map((row) => [row.code, row.title, row.stage, row.dueDate]),
     ).toEqual([
-      [`AC-${opened.rows[0].date.slice(0, 4)}-002`, "Con fecha", "cierre", "2026-01-10"],
+      [
+        `AC-${opened.rows[0].date.slice(0, 4)}-002`,
+        "Con fecha",
+        "cierre",
+        "2026-01-10",
+      ],
       [`AC-${opened.rows[0].date.slice(0, 4)}-001`, "Sin fecha", "plan", null],
     ]);
     expect(opened.capped).toBe(false);
@@ -280,6 +296,26 @@ describe("formTrackings.list y la respuesta", () => {
     await expect(list("open")).rejects.toThrow(
       formTrackingsErrors.insufficientPermissions,
     );
+  });
+
+  it("quien puede abrir asuntos lo encuentra en «Para diligenciar», y su asunto en «Mis respuestas»", async () => {
+    await grant(t, s.roleId, "fillForms");
+    authState.userId = s.roleHolderId;
+    await open({ que: "De la inspectora" });
+
+    const fillable = await t.query(api.forms.listFillable, {
+      projectId: s.projectId,
+    });
+    expect(fillable?.map((row) => row.kind)).toContain("tracking");
+
+    const mine = await t.query(api.formResponses.listMine, {
+      projectId: s.projectId,
+      paginationOpts: { numItems: 10, cursor: null },
+    });
+    expect(mine.page.map((row) => [row.kind, row.title])).toEqual([
+      ["tracking", "De la inspectora"],
+    ]);
+    expect(mine.page[0].code).toMatch(/^AC-\d{4}-001$/);
   });
 
   it("abrir el asunto enseña sus etapas y si se puede completar", async () => {
@@ -375,9 +411,15 @@ describe("formResults sobre un seguimiento", () => {
   });
 
   it("dice cuánto se abrió, cuánto se cerró y qué sigue abierto y vencido", async () => {
-    const closed = await open({ que: "Extintor sin presión", origen: "Auditoría" });
+    const closed = await open({
+      que: "Extintor sin presión",
+      origen: "Auditoría",
+    });
     await closeIt(closed);
-    const late = await open({ que: "Botiquín incompleto", origen: "Inspección" });
+    const late = await open({
+      que: "Botiquín incompleto",
+      origen: "Inspección",
+    });
     // La segunda etapa trae el compromiso, ya pasado: queda abierto y vencido.
     await complete(late, { accion: "Reponer", compromiso: "2020-01-15" });
     await open({ que: "Camilla sin correas", origen: "Inspección" });

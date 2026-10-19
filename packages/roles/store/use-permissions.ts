@@ -1,5 +1,6 @@
 import { useCurrentMember } from "@/packages/members/api";
 import { useProjectId } from "@/packages/projects/store/use-project-id";
+import { isCaptureView } from "../lib/capture-view";
 import { validatePermissions } from "../lib/validate-permissions";
 import type { PermissionValue } from "../lib/permissions";
 
@@ -33,5 +34,9 @@ export const usePermissions = () => {
     /** Propietario o administrador: los dos niveles que un rol personalizado
      *  no alcanza (`01 §5.1`). */
     isElevated: member?.role === "owner" || member?.role === "admin",
+    /** Sólo diligencia: menú, inicio y migas de captura (`03 §2.2`). */
+    isCaptureView:
+      !!member &&
+      isCaptureView({ role: member.role, customRole: member.customRole }),
   };
 };

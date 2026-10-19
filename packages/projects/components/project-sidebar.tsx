@@ -49,13 +49,49 @@ export const ProjectSidebar = ({
   ...props
 }: ComponentProps<typeof Sidebar>) => {
   const projectId = useProjectId();
-  const { can, isLoading } = usePermissions();
+  const { can, isLoading, isCaptureView } = usePermissions();
   const canViewLogs = can(["viewLogs"]);
   const canSeeForms = can(FORMS_PERMISSIONS);
   const canSeeTrackings = can(["viewResponses", "fillForms"]);
 
   const entries: SidebarMenuEntry[] = useMemo(() => {
     const base = `/projects/${projectId}`;
+    // Quien sólo diligencia ve lo suyo y nada más: el catálogo de formatos es
+    // de quien administra (`03 §2.2`).
+    if (isCaptureView) {
+      return [
+        {
+          title: "Inicio",
+          icon: House,
+          hint: "Los formatos que puedes diligenciar",
+          group: "operacion",
+          href: base,
+        },
+        {
+          title: "Mis respuestas",
+          icon: ENTITY_ICONS.response,
+          hint: "Lo que has diligenciado",
+          group: "operacion",
+          href: formRoutes.mine(projectId),
+        },
+        {
+          title: "Seguimientos",
+          icon: ENTITY_ICONS.tracking,
+          hint: "Los asuntos que has abierto",
+          group: "operacion",
+          href: formRoutes.trackings(projectId),
+        },
+        // Se queda: ahí está «Salir del proyecto», y ninguna acción puede
+        // quedar inalcanzable (`02 §7.1`). Su menú ya enseña sólo «General».
+        {
+          title: "Ajustes",
+          icon: Settings,
+          hint: "El proyecto y tu pertenencia a él",
+          group: "configuracion",
+          href: `${base}/ajustes`,
+        },
+      ];
+    }
     return [
       {
         title: "Inicio",
@@ -104,7 +140,7 @@ export const ProjectSidebar = ({
         href: `${base}/ajustes`,
       },
     ];
-  }, [projectId, canViewLogs, canSeeForms, canSeeTrackings]);
+  }, [projectId, isCaptureView, canViewLogs, canSeeForms, canSeeTrackings]);
 
   return (
     <Sidebar variant="inset" collapsible="icon" {...props}>

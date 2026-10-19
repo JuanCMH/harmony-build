@@ -18,7 +18,8 @@ import { useProjectId } from "@/packages/projects/store/use-project-id";
 import type { PermissionValue } from "@/packages/roles/lib/permissions";
 import { usePermissions } from "@/packages/roles/store/use-permissions";
 import { Lock, Plus } from "lucide-react";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 /** Basta una para ver la lista; sin ninguna, el servidor no devuelve nada. */
 const FORM_KEYS: PermissionValue[] = [
@@ -31,12 +32,20 @@ const FORM_KEYS: PermissionValue[] = [
 ];
 
 /** Los formatos y los listados del proyecto. La pestaña, la búsqueda y los
- *  filtros viven en la URL, así que la pantalla es enlazable. */
+ *  filtros viven en la URL, así que la pantalla es enlazable.
+ *
+ *  Es un catálogo de quien administra: quien sólo diligencia (la vista de
+ *  captura) tiene sus formatos en el inicio, y aquí se le lleva a él. */
 export default function ProjectFormsPage() {
   const projectId = useProjectId();
   const { data: project } = useGetProject({ id: projectId });
-  const { can, isLoading } = usePermissions();
+  const router = useRouter();
+  const { can, isLoading, isCaptureView } = usePermissions();
   const [{ clase }] = useFormsListView();
+
+  useEffect(() => {
+    if (isCaptureView) router.replace(`/projects/${projectId}`);
+  }, [isCaptureView, router, projectId]);
   const [createOpen, setCreateOpen] = useState(false);
 
   const kind = KIND_BY_CLASS[clase];
@@ -63,7 +72,7 @@ export default function ProjectFormsPage() {
       />
       <PageMain
         variant="listado"
-        isLoading={isLoading}
+        isLoading={isLoading || isCaptureView}
         loadingText="Se están cargando los formatos."
       >
         {can(FORM_KEYS) ? (

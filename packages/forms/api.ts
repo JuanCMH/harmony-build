@@ -106,6 +106,13 @@ export const useListResponses = (
   data: Omit<typeof api.formResponses.list._args, "paginationOpts"> | "skip",
 ) => usePaginatedFetch(api.formResponses.list, data, RESPONSES_PAGE_SIZE);
 
+/** «Mis respuestas». Lanza sin `fillForms`. */
+export const useListMyResponses = (
+  data:
+    | Omit<typeof api.formResponses.listMine._args, "paginationOpts">
+    | "skip",
+) => usePaginatedFetch(api.formResponses.listMine, data, RESPONSES_PAGE_SIZE);
+
 /* ─────────────────────────────── Resultados ────────────────────────────── */
 
 /** Las definiciones de los resultados de un formato. `null` sin acceso. */

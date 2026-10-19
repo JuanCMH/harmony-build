@@ -74,14 +74,21 @@ export function relativeDayText(
   return `el ${shortDate(date)}`;
 }
 
-/** Lo que dice la fila de un formato en «Para diligenciar». */
+/** Lo que dice la fila de un formato en «Para diligenciar». En un
+ *  seguimiento no se diligencia: se abre un asunto. */
 export function lastFilledText(
   last: { date: string | null; at: number | null },
   now: number,
+  kind: "record" | "tracking" = "record",
 ): string {
   // Sin fecha de negocio se deduce del instante: es el mismo día, dicho por el
   // mismo reloj.
   const date = last.date ?? (last.at ? todayInColombia(last.at) : null);
+  if (kind === "tracking") {
+    return date === null
+      ? "Todavía no has abierto ningún asunto"
+      : `Último asunto: ${relativeDayText(date, now, last.at)}`;
+  }
   return date === null
     ? "Todavía no lo has diligenciado"
     : `Última vez: ${relativeDayText(date, now, last.at)}`;

@@ -14,6 +14,7 @@ import {
   useSubmitResponse,
 } from "@/packages/forms/api";
 import { FormCapture } from "@/packages/forms/components/form-capture";
+import { useListCrumb } from "@/packages/forms/lib/use-list-crumb";
 import { formRoutes } from "@/packages/forms/lib/routes";
 import { useCaptureAuthor } from "@/packages/forms/lib/use-capture-author";
 import { useFormId } from "@/packages/forms/store/use-form-id";
@@ -75,13 +76,11 @@ export default function FillFormPage() {
     [projectId, formId, version],
   );
 
+  const listCrumb = useListCrumb(isTracking ? "tracking" : "record", "fill");
   const breadcrumb = project
     ? [
         { label: project.name, href: `/projects/${projectId}` },
-        {
-          label: isTracking ? "Seguimientos" : "Formatos",
-          href: formRoutes.list(projectId, isTracking ? "tracking" : "record"),
-        },
+        ...(listCrumb ? [listCrumb] : []),
         ...(form
           ? [
               {
@@ -141,7 +140,9 @@ export default function FillFormPage() {
               description={form.description}
               versionNumber={version.number}
               eyebrow={
-                isTracking ? `Abrir asunto · ${sections[0]?.label ?? ""}` : undefined
+                isTracking
+                  ? `Abrir asunto · ${sections[0]?.label ?? ""}`
+                  : undefined
               }
               sections={sections}
               draftScope={draftScope}

@@ -97,6 +97,19 @@ describe("la última vez que se diligenció un formato", () => {
     );
   });
 
+  it("en un seguimiento habla de asuntos", () => {
+    expect(lastFilledText({ date: null, at: null }, NOW, "tracking")).toBe(
+      "Todavía no has abierto ningún asunto",
+    );
+    expect(
+      lastFilledText(
+        { date: "2026-09-29", at: colombia(2026, 9, 29, 6, 40) },
+        NOW,
+        "tracking",
+      ),
+    ).toBe("Último asunto: hoy a las 6:40");
+  });
+
   it("sin fecha de negocio, la saca del instante", () => {
     expect(
       lastFilledText({ date: null, at: colombia(2026, 9, 28, 23, 30) }, NOW),

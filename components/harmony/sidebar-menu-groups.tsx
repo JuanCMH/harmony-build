@@ -20,6 +20,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -81,6 +82,10 @@ const MenuEntryButton = ({
   entry: SidebarMenuEntry;
   isActive: boolean;
 }) => {
+  // En el teléfono el menú es una hoja encima de la pantalla: al elegir a
+  // dónde ir, se cierra. Abierta, tapaba la pantalla a la que se acababa de
+  // llegar.
+  const { setOpenMobile } = useSidebar();
   const content = (
     <>
       {entry.icon && <entry.icon className="size-4 text-muted-foreground" />}
@@ -112,7 +117,9 @@ const MenuEntryButton = ({
         isActive={isActive}
         className={className}
       >
-        <Link href={entry.href}>{content}</Link>
+        <Link href={entry.href} onClick={() => setOpenMobile(false)}>
+          {content}
+        </Link>
       </SidebarMenuButton>
     ) : (
       <SidebarMenuButton
@@ -133,8 +140,16 @@ const MenuEntryButton = ({
           {entry.dropdown.items.map((item, index) => (
             <div key={item.title}>
               {item.separator && index > 0 && <DropdownMenuSeparator />}
-              <DropdownMenuItem className="cursor-pointer" asChild={!!item.href} onClick={item.onClick}>
-                {item.href ? <Link href={item.href}>{item.title}</Link> : item.title}
+              <DropdownMenuItem
+                className="cursor-pointer"
+                asChild={!!item.href}
+                onClick={item.onClick}
+              >
+                {item.href ? (
+                  <Link href={item.href}>{item.title}</Link>
+                ) : (
+                  item.title
+                )}
               </DropdownMenuItem>
             </div>
           ))}
@@ -188,7 +203,11 @@ export function SidebarMenuGroupsLoading({
                   <Skeleton
                     className={cn(
                       "h-3.5",
-                      indice % 3 === 0 ? "w-28" : indice % 3 === 1 ? "w-20" : "w-24",
+                      indice % 3 === 0
+                        ? "w-28"
+                        : indice % 3 === 1
+                          ? "w-20"
+                          : "w-24",
                     )}
                   />
                 </div>
@@ -254,11 +273,7 @@ export function SidebarMenuGroups({
         }
 
         return (
-          <Collapsible
-            key={group}
-            defaultOpen
-            className="group/collapsible"
-          >
+          <Collapsible key={group} defaultOpen className="group/collapsible">
             <SidebarGroup>
               <SidebarGroupLabel
                 asChild

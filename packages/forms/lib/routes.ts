@@ -13,6 +13,8 @@ export const formRoutes = {
           ? "?clase=seguimientos"
           : ""
     }`,
+  /** Lo que diligenció quien mira, en todos los formatos. */
+  mine: (projectId: string) => `/projects/${projectId}/mis-respuestas`,
   /** La bandeja: los asuntos de todos los seguimientos del proyecto. */
   trackings: (projectId: string) => `/projects/${projectId}/seguimientos`,
   responses: (projectId: string, formId: string) =>

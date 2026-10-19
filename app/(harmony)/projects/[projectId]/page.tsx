@@ -16,6 +16,7 @@ import { useGetProject } from "@/packages/projects/api";
 import { ProjectHeader } from "@/packages/projects/components/project-header";
 import { useProjectId } from "@/packages/projects/store/use-project-id";
 import { RoleGate } from "@/packages/roles/components/role-gate";
+import { usePermissions } from "@/packages/roles/store/use-permissions";
 import { Pencil } from "lucide-react";
 import { useState } from "react";
 
@@ -23,15 +24,17 @@ import { useState } from "react";
  * Inicio del proyecto: lo que cada quien viene a hacer.
  *
  * Quien ve las respuestas de todos encuentra **el tablero y nada más**: bajo
- * la barra van sus pestañas. Quien sólo diligencia no tiene tablero —son
- * agregados de respuestas que no ve—, y encuentra sus formatos, el equipo y
- * la actividad.
+ * la barra van sus pestañas. Quien no las ve no tiene tablero —son agregados
+ * de respuestas que no ve—, y encuentra sus formatos, el equipo y la
+ * actividad. Quien sólo diligencia (la vista de captura, `03 §2.2`) encuentra
+ * sus formatos y nada más: viene a diligenciar uno.
  */
 export default function ProjectHomePage() {
   const projectId = useProjectId();
   const { data: project } = useGetProject({ id: projectId });
   const { data: dashboard } = useGetDashboard({ projectId });
   const [editing, setEditing] = useState(false);
+  const { isCaptureView } = usePermissions();
 
   return (
     <PageShell>
@@ -55,7 +58,9 @@ export default function ProjectHomePage() {
             alto disponible y una tarjeta `h-full` lo llena entero
             (`03 §2.3`). */}
         <div className="shrink-0 space-y-4">
-          {dashboard === undefined ? (
+          {isCaptureView ? (
+            <FillableFormsPanel page className="h-auto" />
+          ) : dashboard === undefined ? (
             <div className="space-y-4" aria-busy="true">
               <span className="sr-only">Cargando el tablero…</span>
               <div className="flex items-center justify-between gap-2">

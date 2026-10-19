@@ -18,6 +18,7 @@ import { ResponsesTable } from "@/packages/forms/components/responses-table";
 import { TrackingsTable } from "@/packages/forms/components/trackings-table";
 import { KIND_ICON } from "@/packages/forms/lib/field-catalog";
 import { KIND_TEXT } from "@/packages/forms/lib/kind-text";
+import { useListCrumb } from "@/packages/forms/lib/use-list-crumb";
 import { formRoutes } from "@/packages/forms/lib/routes";
 import { useFormId } from "@/packages/forms/store/use-form-id";
 import { useGetProject } from "@/packages/projects/api";
@@ -37,6 +38,7 @@ export default function FormResponsesPage() {
   const formId = useFormId();
   const { data: project } = useGetProject({ id: projectId });
   const { data: form } = useGetForm({ id: formId });
+  const listCrumb = useListCrumb(form?.kind ?? "record", "form");
   const { can, isLoading: isLoadingPermissions } = usePermissions();
 
   const wasPublished = !!form && form.publishedVersionNumber !== null;
@@ -199,10 +201,7 @@ export default function FormResponsesPage() {
           project && form
             ? [
                 { label: project.name, href: `/projects/${projectId}` },
-                {
-                  label: KIND_TEXT[form.kind].listLabel,
-                  href: formRoutes.list(projectId, form.kind),
-                },
+                ...(listCrumb ? [listCrumb] : []),
                 { label: form.name },
               ]
             : []

@@ -946,6 +946,11 @@ describe("aislamiento entre proyectos (01 §10)", () => {
             formId: f.open,
             paginationOpts: FIRST_PAGE,
           }),
+        "formResponses.listMine": () =>
+          t.query(api.formResponses.listMine, {
+            projectId: s.projectId,
+            paginationOpts: FIRST_PAGE,
+          }),
         "formEntries.createEntry": () =>
           t.mutation(api.formEntries.createEntry, {
             formId: f.vehicles,
@@ -1140,5 +1145,56 @@ describe("aislamiento entre proyectos (01 §10)", () => {
     await expect(
       t.mutation(api.formCategories.remove, { id: category }),
     ).rejects.toThrow(formCategoriesErrors.insufficientPermissions);
+  });
+});
+
+describe("Mis respuestas", () => {
+  const mineIds = async (t: TestConvex, s: Seed) =>
+    (
+      await t.query(api.formResponses.listMine, {
+        projectId: s.projectId,
+        paginationOpts: FIRST_PAGE,
+      })
+    ).page.map((row) => row._id);
+
+  it("`fillForms`: sólo las suyas, de todos los formatos", async () => {
+    const t = setupTest();
+    const s = await seedProject(t);
+    const f = await seedForms(t, s);
+    await grant(t, s.roleId, "fillForms");
+
+    authState.userId = s.roleHolderId;
+    expect(await mineIds(t, s)).toEqual([f.mine]);
+  });
+
+  it("los elementos de un listado no son respuestas", async () => {
+    const t = setupTest();
+    const s = await seedProject(t);
+    await seedForms(t, s);
+
+    // El propietario creó los vehículos y no ha diligenciado nada.
+    authState.userId = s.ownerId;
+    expect(await mineIds(t, s)).toEqual([]);
+  });
+
+  it("ni con `viewResponses` salen las de otros", async () => {
+    const t = setupTest();
+    const s = await seedProject(t);
+    const f = await seedForms(t, s);
+    await grant(t, s.roleId, "fillForms", "viewResponses");
+
+    authState.userId = s.roleHolderId;
+    expect(await mineIds(t, s)).toEqual([f.mine]);
+  });
+
+  it("sin la llave de diligenciar: lanza", async () => {
+    const t = setupTest();
+    const s = await seedProject(t);
+    await seedForms(t, s);
+
+    authState.userId = s.roleHolderId;
+    await expect(mineIds(t, s)).rejects.toThrow(
+      formResponsesErrors.insufficientPermissions,
+    );
   });
 });

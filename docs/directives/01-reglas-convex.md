@@ -422,7 +422,7 @@ sin documentos previos, así que no hay rol que pueda carecer de una.
 | **Formatos** | `createForms` | `forms.create`, `forms.duplicate`. |
 | | `editForms` | `formTrackings.configure`; `formVersions.saveDraft`, `publish`, `discardDraft`, `getDraft`; `forms.updateDetails`, `setTitleField`; `formCategories.*`; `forms.listCatalogs`; `formResults.create`, `update`, `remove`. |
 | | `deleteForms` | `forms.archive`, `unarchive`, `remove`. |
-| | `fillForms` | `formTrackings.open` y `completeStage` (con la audiencia del seguimiento); sin `viewResponses`, `formTrackings.list` devuelve sólo los asuntos propios. `formResponses.submit` (con la audiencia del formato), `formFiles.generateUploadUrl`, `formEntries.searchEntries`. Sin `viewResponses`, `formResponses.list` devuelve sólo las propias. |
+| | `fillForms` | `formTrackings.open` y `completeStage` (con la audiencia del seguimiento); sin `viewResponses`, `formTrackings.list` devuelve sólo los asuntos propios. `formResponses.submit` (con la audiencia del formato), `formResponses.listMine` («Mis respuestas»: sólo las propias, siempre), `formFiles.generateUploadUrl`, `formEntries.searchEntries`. Sin `viewResponses`, `formResponses.list` devuelve sólo las propias. |
 | | `viewResponses` | `formResponses.list` y `getById` de las respuestas de todos; `formEntries.listEntries`, `listEntryHistory`; `formResults.compute` y `dashboards.get`, que son agregados de ellas. |
 | | `voidResponses` | `formResponses.void`. |
 | | `editCatalogs` | `formEntries.createEntry`, `updateEntry`, `setEntryActive`; lectura de todos los elementos de un listado, y con ella `formResults.compute` sobre un listado. |
