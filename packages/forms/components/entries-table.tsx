@@ -77,7 +77,7 @@ const TableLoading = () => (
     {Array.from({ length: 6 }, (_, index) => index).map((index) => (
       <div key={index} className="flex items-center gap-4 px-3 py-3">
         <Skeleton className="h-3.5 w-40" />
-        <Skeleton className="hidden h-3.5 flex-1 md:block" />
+        <Skeleton className="hidden h-3.5 flex-1 @3xl:block" />
         <Skeleton className="h-3.5 w-20" />
       </div>
     ))}
@@ -140,8 +140,10 @@ export const EntriesTable = ({
   ) : null;
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+    // Los cortes se miden contra el espacio que deja el menú lateral, no
+    // contra la ventana (`03 §2.3`).
+    <div className="@container space-y-3">
+      <div className="flex flex-col gap-2 @2xl:flex-row @2xl:items-center">
         <div className="min-w-0 space-y-1">
           {lead}
           {!isLoading ? (
@@ -152,8 +154,8 @@ export const EntriesTable = ({
             </p>
           ) : null}
         </div>
-        <div className="flex flex-col gap-2 sm:ml-auto sm:flex-row sm:items-center">
-          <div className="relative min-w-0 sm:w-72">
+        <div className="flex flex-col gap-2 @md:flex-row @md:items-center @2xl:ml-auto">
+          <div className="relative min-w-0 @md:w-72">
             <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               className="pl-8"
@@ -209,8 +211,8 @@ export const EntriesTable = ({
           )
         ) : (
           <>
-            {/* Escritorio y tableta: la tabla. */}
-            <div className="hidden md:block">
+            {/* Con sitio para las columnas: la tabla. */}
+            <div className="hidden @3xl:block">
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
@@ -220,6 +222,9 @@ export const EntriesTable = ({
                         key={column.fieldId}
                         className={cn(
                           HEAD_CLASS,
+                          // El encabezado lo nombra quien diseña el formato:
+                          // uno largo se parte en vez de ensanchar la columna.
+                          "h-auto min-h-9 py-2 whitespace-normal",
                           isNumericColumn(column) && "text-right",
                         )}
                       >
@@ -281,8 +286,8 @@ export const EntriesTable = ({
               </Table>
             </div>
 
-            {/* Teléfono: una fila pulsable por elemento, con lo esencial. */}
-            <ul className="divide-y divide-border/60 md:hidden">
+            {/* Sin él: una fila pulsable por elemento, con lo esencial. */}
+            <ul className="divide-y divide-border/60 @3xl:hidden">
               {rows.map((row) => {
                 const isInactive = row.active === false;
                 const details = phoneRowDetails(

@@ -45,9 +45,11 @@ export const ResponsesFiltersBar = ({
   onChange,
   onClear,
 }: ResponsesFiltersBarProps) => (
-  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:ml-auto lg:flex-nowrap">
+  // Los cortes son del contenedor de `ResponsesTable`. Envuelve en vez de
+  // empujar el último control fuera del borde.
+  <div className="flex min-w-0 flex-col gap-2 @md:flex-row @md:flex-wrap @md:items-center @4xl:ml-auto @4xl:justify-end">
     <DateRangePicker
-      className="w-full sm:w-64"
+      className="w-full @md:w-64"
       align="end"
       from={toDate(from)}
       to={toDate(to)}
@@ -61,13 +63,13 @@ export const ResponsesFiltersBar = ({
     />
     {catalogs.length > 0 ? (
       <RelatedEntryFilter
-        className="w-full sm:w-auto"
+        className="w-full @md:w-auto"
         catalogs={catalogs}
         value={entryId}
         onChange={(next) => onChange({ entryId: next })}
       />
     ) : null}
-    <div className="flex items-center justify-between gap-3 sm:justify-start">
+    <div className="flex items-center justify-between gap-3 @md:justify-start">
       {canViewAll ? (
         <label className="flex h-9 shrink-0 items-center gap-2 text-ui text-muted-foreground">
           <Switch

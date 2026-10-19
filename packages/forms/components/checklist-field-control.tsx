@@ -186,7 +186,7 @@ const ChecklistBlockRows = ({
             type="button"
             variant="outline"
             size="sm"
-            className="shrink-0"
+            className={cn("shrink-0", EXTRA_CONTROL_HEIGHT)}
             onClick={onFill}
           >
             <ListChecks />

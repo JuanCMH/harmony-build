@@ -60,7 +60,7 @@ export const PasswordField = ({
         <button
           type="button"
           onClick={() => setVisible((v) => !v)}
-          className="absolute inset-y-0 right-3 flex items-center text-muted-foreground/50 hover:text-foreground transition-colors cursor-pointer"
+          className="absolute inset-y-0 right-0 flex w-10 items-center justify-center rounded-r-md text-muted-foreground/50 hover:text-foreground transition-colors cursor-pointer"
           aria-label={
             visible ? `Ocultar ${accessibleName}` : `Mostrar ${accessibleName}`
           }

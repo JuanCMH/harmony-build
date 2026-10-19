@@ -158,6 +158,7 @@ export const SignatureFieldControl = ({
               value={signerName}
               disabled={disabled}
               autoComplete="off"
+              className="h-10 sm:h-9"
               maxLength={80}
               aria-invalid={invalid && !signerName.trim()}
               onChange={(event) => setSignerName(event.target.value)}
@@ -174,6 +175,7 @@ export const SignatureFieldControl = ({
               disabled={disabled}
               inputMode="numeric"
               autoComplete="off"
+              className="h-10 sm:h-9"
               maxLength={20}
               onChange={(event) => setSignerDocument(event.target.value)}
               onBlur={() =>
@@ -253,6 +255,7 @@ export const SignatureFieldControl = ({
           type="button"
           variant="outline"
           size="sm"
+          className="h-10 sm:h-9"
           disabled={disabled || isEmpty}
           onClick={handleClear}
         >

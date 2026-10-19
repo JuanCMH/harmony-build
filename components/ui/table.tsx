@@ -5,10 +5,41 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 
 function Table({ className, ...props }: React.ComponentProps<"table">) {
+  const ref = React.useRef<HTMLDivElement>(null)
+
+  // Una tabla más ancha que su caja se desplaza de lado, y sin una señal nadie
+  // lo sabe: las columnas de la derecha parecen no existir. El borde por donde
+  // queda contenido se difumina. Los atributos se escriben a mano para no
+  // repintar la tabla en cada evento de desplazamiento.
+  React.useEffect(() => {
+    const container = ref.current
+    if (!container) return
+    const update = () => {
+      const max = container.scrollWidth - container.clientWidth
+      container.toggleAttribute("data-more-start", container.scrollLeft > 1)
+      container.toggleAttribute(
+        "data-more-end",
+        container.scrollLeft < max - 1
+      )
+    }
+    update()
+    container.addEventListener("scroll", update, { passive: true })
+    const observer = new ResizeObserver(update)
+    observer.observe(container)
+    if (container.firstElementChild) {
+      observer.observe(container.firstElementChild)
+    }
+    return () => {
+      container.removeEventListener("scroll", update)
+      observer.disconnect()
+    }
+  }, [])
+
   return (
     <div
+      ref={ref}
       data-slot="table-container"
-      className="relative w-full overflow-x-auto"
+      className="relative w-full overflow-x-auto data-more-end:mask-r-from-[calc(100%-3rem)] data-more-start:mask-l-from-[calc(100%-3rem)]"
     >
       <table
         data-slot="table"

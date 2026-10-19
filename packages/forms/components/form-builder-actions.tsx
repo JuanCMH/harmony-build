@@ -149,8 +149,9 @@ export const FormBuilderActions = ({
         ) : (
           <Save className="size-4" />
         )}
+        {/* En el teléfono, sólo el icono: la cabecera es de las migas. */}
         <span className="hidden sm:inline">Guardar borrador</span>
-        <span className="sm:hidden">Guardar</span>
+        <span className="sr-only sm:hidden">Guardar borrador</span>
       </Button>
       <Button
         size="sm"

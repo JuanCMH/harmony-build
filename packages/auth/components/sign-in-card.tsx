@@ -72,7 +72,7 @@ export const SignInCard = ({ setState }: SignInCardProps) => {
               <button
                 type="button"
                 onClick={() => setState("reset")}
-                className="text-xs text-muted-foreground hover:text-h-purple transition-colors cursor-pointer"
+                className="inline-flex min-h-6 items-center text-xs text-muted-foreground hover:text-h-purple transition-colors cursor-pointer"
               >
                 ¿Olvidaste tu contraseña?
               </button>

@@ -36,22 +36,22 @@ export function ResponsiveBreadcrumb({ items }: ResponsiveBreadcrumbProps) {
   const hiddenItems = items.slice(0, -1);
 
   return (
-    <Breadcrumb className="min-w-0 gap-0">
-      {/* Desktop: full breadcrumb */}
-      <BreadcrumbList className="hidden min-w-0 flex-nowrap md:flex">
+    // Colapsa por el espacio que le dejan el menú lateral y las acciones de la
+    // cabecera, no por el ancho de la ventana: en una tableta con acciones
+    // las migas completas quedaban en «Pis… › F… › Ins…».
+    <Breadcrumb className="@container w-full min-w-0 gap-0">
+      {/* Con sitio: todas las migas */}
+      <BreadcrumbList className="hidden min-w-0 flex-nowrap @lg:flex">
         {items.map((item, index) => (
           <Fragment key={index}>
             {index > 0 && <BreadcrumbSeparator className="shrink-0" />}
             <BreadcrumbItem className="min-w-0">
               {item.href ? (
-                <BreadcrumbLink
-                  href={item.href}
-                  className="truncate max-w-[20vw]"
-                >
+                <BreadcrumbLink href={item.href} className="truncate max-w-64">
                   {item.label}
                 </BreadcrumbLink>
               ) : (
-                <BreadcrumbPage className="truncate max-w-[20vw]">
+                <BreadcrumbPage className="truncate max-w-64">
                   {item.label}
                 </BreadcrumbPage>
               )}
@@ -60,8 +60,8 @@ export function ResponsiveBreadcrumb({ items }: ResponsiveBreadcrumbProps) {
         ))}
       </BreadcrumbList>
 
-      {/* Mobile: ellipsis + last item */}
-      <BreadcrumbList className="flex min-w-0 flex-nowrap md:hidden">
+      {/* Sin él: puntos suspensivos y el último nivel */}
+      <BreadcrumbList className="flex min-w-0 flex-nowrap @lg:hidden">
         {hiddenItems.length > 0 && (
           <>
             <BreadcrumbItem>
@@ -90,14 +90,11 @@ export function ResponsiveBreadcrumb({ items }: ResponsiveBreadcrumbProps) {
         )}
         <BreadcrumbItem className="min-w-0">
           {lastItem.href ? (
-            <BreadcrumbLink
-              href={lastItem.href}
-              className="truncate max-w-[40vw]"
-            >
+            <BreadcrumbLink href={lastItem.href} className="block truncate">
               {lastItem.label}
             </BreadcrumbLink>
           ) : (
-            <BreadcrumbPage className="truncate max-w-[40vw]">
+            <BreadcrumbPage className="block truncate">
               {lastItem.label}
             </BreadcrumbPage>
           )}
